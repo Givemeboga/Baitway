@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: baitway_db
+    restart: always
+    environment:
+      POSTGRES_USER: baitway_admin
+      POSTGRES_PASSWORD: baitway_password
+      POSTGRES_DB: baitway
+    ports:
+      - "5433:5432"
+    volumes:
+      - baitway_pgdata:/var/lib/postgresql/data
+
+volumes:
+  baitway_pgdata:
