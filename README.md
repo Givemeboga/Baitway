@@ -4,14 +4,14 @@
 
 # 🎣 BaitWay
 
-**Plateforme d'analyse SOC — Portail Phishing & Recherche d'IOC**
+**SOC analysis platform — Phishing Portal & IOC Lookup**
 
-Deux tâches clés d'un SOC réunies dans une seule interface : l'analyse automatisée
-d'e-mails de phishing et la recherche d'indicateurs de compromission.
+Two core SOC tasks brought together in a single interface: automated phishing
+email analysis and indicator-of-compromise lookup.
 
 <br/>
 
-![status](https://img.shields.io/badge/status-en%20d%C3%A9veloppement-orange?style=flat-square)
+![status](https://img.shields.io/badge/status-in%20development-orange?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)
@@ -22,69 +22,69 @@ d'e-mails de phishing et la recherche d'indicateurs de compromission.
 
 <br/>
 
-[Aperçu](#-aperçu) ·
-[Fonctionnalités](#-fonctionnalités) ·
+[Overview](#-overview) ·
+[Features](#-features) ·
 [Architecture](#️-architecture) ·
 [Installation](#-installation) ·
-[Lancement](#️-lancement) ·
+[Running the app](#️-running-the-app) ·
 [API](#-api) ·
-[Équipe](#-équipe)
+[Team](#-team)
 
 </div>
 
 ---
 
-## 📖 Aperçu
+## 📖 Overview
 
-Les équipes de sécurité opérationnelle (SOC) passent une part importante de leur temps sur deux tâches répétitives : analyser des e-mails suspects et vérifier des indicateurs de compromission (IP, domaines, URLs, empreintes de fichiers). Ces opérations sont souvent réalisées manuellement, en jonglant entre plusieurs outils et services en ligne.
+Security Operations Center (SOC) teams spend a significant share of their time on two repetitive tasks: analysing suspicious emails and checking indicators of compromise (IPs, domains, URLs, file hashes). These operations are often performed manually, juggling several tools and online services.
 
-**BaitWay** centralise ces deux fonctions dans une interface web unique. Un analyste soumet un e-mail suspect ou un indicateur, et obtient un **score de risque** et un **verdict** instantanés, enrichis à partir de plusieurs sources de threat intelligence.
+**BaitWay** brings both functions together in a single web interface. An analyst submits a suspicious email or an indicator and gets an instant **risk score** and **verdict**, enriched from multiple threat intelligence sources.
 
 > [!NOTE]
-> Projet développé dans le cadre d'un stage à l'**ESPRIM** (École Supérieure Privée d'Ingénieurs de Monastir), avec une architecture modulaire conçue pour un développement en binôme.
+> Project built during an internship at **ESPRIM** (École Supérieure Privée d'Ingénieurs de Monastir), with a modular architecture designed for pair development.
 
 ---
 
-## ✨ Fonctionnalités
+## ✨ Features
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
-### 🎣 Module A — Portail Phishing
+### 🎣 Module A — Phishing Portal
 
-- 📥 Soumission d'e-mails `.eml` (copier-coller ou upload)
-- 📨 **En-têtes** — SPF, DKIM, DMARC, From/Reply-To, IP d'origine
-- 🔗 **URLs** — défang, raccourcisseurs, domaines sosies, réputation
-- 📎 **Pièces jointes** — MD5/SHA256, extensions dangereuses
-- 🎯 Score de risque **0–100** + verdict
-- 📋 File de triage triée par risque
+- 📥 `.eml` email submission (paste or upload)
+- 📨 **Headers** — SPF, DKIM, DMARC, From/Reply-To, originating IP
+- 🔗 **URLs** — defanging, shorteners, lookalike domains, reputation
+- 📎 **Attachments** — MD5/SHA256, dangerous extensions
+- 🎯 Risk score **0–100** + verdict
+- 📋 Triage queue sorted by risk
 
 </td>
 <td width="50%" valign="top">
 
-### 🔍 Module B — Recherche d'IOC
+### 🔍 Module B — IOC Lookup
 
-- 🧩 Détection automatique du type (IP / domaine / URL / hash)
-- 🌐 **Multi-sources** — VirusTotal, AbuseIPDB, URLhaus, MalwareBazaar, WHOIS
-- ⚖️ Agrégation en un verdict unique
-- ⚡ Mise en cache (respect des quotas d'API)
-- 🕓 Historique de recherche
-- 📤 Export CSV / liste noire
+- 🧩 Automatic type detection (IP / domain / URL / hash)
+- 🌐 **Multi-source** — VirusTotal, AbuseIPDB, URLhaus, MalwareBazaar, WHOIS
+- ⚖️ Aggregation into a single verdict
+- ⚡ Caching (respects API quotas)
+- 🕓 Search history
+- 📤 CSV / blocklist export
 
 </td>
 </tr>
 </table>
 
-**🛡️ Socle commun** — Authentification JWT · Rôles analyste/admin · Tableau de bord unifié · Documentation OpenAPI
+**🛡️ Shared foundation** — JWT authentication · Analyst/admin roles · Unified dashboard · OpenAPI documentation
 
-Les deux modules partagent la même échelle de verdict :
+Both modules share the same verdict scale:
 
-| Verdict | Score | Signification |
+| Verdict | Score | Meaning |
 |---|---|---|
-| 🟢 `clean` | 0–30 | Aucun signe de malveillance |
-| 🟠 `suspicious` | 31–70 | Indicateurs douteux, à vérifier |
-| 🔴 `malicious` | 71–100 | Malveillant avéré |
+| 🟢 `clean` | 0–30 | No sign of malicious activity |
+| 🟠 `suspicious` | 31–70 | Questionable indicators, needs review |
+| 🔴 `malicious` | 71–100 | Confirmed malicious |
 
 ---
 
@@ -92,62 +92,62 @@ Les deux modules partagent la même échelle de verdict :
 
 ```mermaid
 flowchart LR
-    U[👤 Analyste SOC] --> FE[⚛️ Frontend React / Vite]
-    FE -->|Axios + JWT| API[⚡ API FastAPI]
+    U[👤 SOC Analyst] --> FE[⚛️ React / Vite Frontend]
+    FE -->|Axios + JWT| API[⚡ FastAPI Backend]
 
     subgraph Backend
-        API --> AUTH[🔐 Auth JWT]
-        API --> PH[🎣 Moteur Phishing]
-        API --> IOC[🔍 Moteur IOC]
+        API --> AUTH[🔐 JWT Auth]
+        API --> PH[🎣 Phishing Engine]
+        API --> IOC[🔍 IOC Engine]
     end
 
     AUTH --> DB[(🐘 PostgreSQL)]
     PH --> DB
     IOC --> DB
 
-    IOC -.->|enrichissement| TI[🌐 Threat Intelligence<br/>VirusTotal · AbuseIPDB · URLhaus]
+    IOC -.->|enrichment| TI[🌐 Threat Intelligence<br/>VirusTotal · AbuseIPDB · URLhaus]
 ```
 
-### 🧰 Stack technique
+### 🧰 Tech stack
 
-| Couche | Technologie | Rôle |
+| Layer | Technology | Role |
 |---|---|---|
-| **Backend** | Python 3.11+ · FastAPI | API REST, moteurs d'analyse |
+| **Backend** | Python 3.11+ · FastAPI | REST API, analysis engines |
 | **Frontend** | React 18 · Vite | Interfaces & app shell |
-| **Base de données** | PostgreSQL 16 | Persistance des données |
-| **ORM / Migrations** | SQLAlchemy · Alembic | Modélisation & versionnement du schéma |
-| **Auth** | JWT (python-jose) · bcrypt | Sessions & rôles |
-| **Conteneurisation** | Docker Compose | Base de données isolée |
-| **Client HTTP / Routing** | Axios · React Router | Communication API & navigation |
+| **Database** | PostgreSQL 16 | Data persistence |
+| **ORM / Migrations** | SQLAlchemy · Alembic | Schema modelling & versioning |
+| **Auth** | JWT (python-jose) · bcrypt | Sessions & roles |
+| **Containerisation** | Docker Compose | Isolated database |
+| **HTTP client / Routing** | Axios · React Router | API communication & navigation |
 
 ---
 
-## ⚙️ Prérequis
+## ⚙️ Prerequisites
 
-| Outil | Version min. | Vérification |
+| Tool | Min. version | Check |
 |---|---|---|
 | ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white) | 3.11 | `python --version` |
 | ![Node](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=nodedotjs&logoColor=white) | 18 | `node --version` |
-| ![Docker](https://img.shields.io/badge/Docker-récent-2496ED?style=flat-square&logo=docker&logoColor=white) | récent | `docker --version` |
-| ![Git](https://img.shields.io/badge/Git-récent-F05032?style=flat-square&logo=git&logoColor=white) | récent | `git --version` |
+| ![Docker](https://img.shields.io/badge/Docker-recent-2496ED?style=flat-square&logo=docker&logoColor=white) | recent | `docker --version` |
+| ![Git](https://img.shields.io/badge/Git-recent-F05032?style=flat-square&logo=git&logoColor=white) | recent | `git --version` |
 
 > [!IMPORTANT]
-> Sous Windows, Docker Desktop nécessite **WSL2** activé. Les commandes de ce README sont données pour `cmd.exe`.
+> On Windows, Docker Desktop requires **WSL2** to be enabled. The commands in this README are written for `cmd.exe`.
 
 ---
 
 ## 🚀 Installation
 
-### 1️⃣ Cloner le dépôt
+### 1️⃣ Clone the repository
 
 ```cmd
 git clone https://github.com/Givemeboga/Baitway.git
 cd Baitway
 ```
 
-### 2️⃣ Lancer la base de données
+### 2️⃣ Start the database
 
-Docker Desktop doit être démarré.
+Docker Desktop must be running.
 
 ```cmd
 docker compose up -d db
@@ -155,9 +155,9 @@ docker compose ps
 ```
 
 > [!WARNING]
-> La base est exposée sur le port **5433** (et non 5432) pour éviter les conflits avec un PostgreSQL local. Si 5433 est déjà pris, modifie le port dans `docker-compose.yml` **et** dans `.env`.
+> The database is exposed on port **5433** (not 5432) to avoid conflicts with a local PostgreSQL instance. If 5433 is already taken, change the port in `docker-compose.yml` **and** in `.env`.
 
-### 3️⃣ Configurer le backend
+### 3️⃣ Set up the backend
 
 ```cmd
 cd backend
@@ -168,7 +168,7 @@ copy .env.example .env
 alembic upgrade head
 ```
 
-### 4️⃣ Configurer le frontend
+### 4️⃣ Set up the frontend
 
 ```cmd
 cd ..\frontend
@@ -179,17 +179,17 @@ npm install
 
 ## 🔧 Configuration
 
-Le backend se configure via `backend/.env` (ignoré par Git — **ne jamais le committer**).
+The backend is configured through `backend/.env` (Git-ignored — **never commit it**).
 
 ```env
 DATABASE_URL=postgresql://baitway_admin:baitway_password@localhost:5433/baitway
-JWT_SECRET=remplace_par_une_cle_secrete
+JWT_SECRET=replace_with_a_secret_key
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=60
 ```
 
 > [!TIP]
-> Génère une clé secrète solide :
+> Generate a strong secret key:
 >
 > ```cmd
 > python -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -197,12 +197,12 @@ JWT_EXPIRE_MINUTES=60
 
 ---
 
-## ▶️ Lancement
+## ▶️ Running the app
 
-Trois terminaux, en parallèle :
+Three terminals, in parallel:
 
 <table>
-<tr><td><strong>🐘 Base de données</strong></td><td>
+<tr><td><strong>🐘 Database</strong></td><td>
 
 ```cmd
 docker compose up -d db
@@ -217,7 +217,7 @@ venv\Scripts\activate
 uvicorn app.main:app --reload
 ```
 
-→ http://localhost:8000 · docs : `/docs`
+→ http://localhost:8000 · docs: `/docs`
 
 </td></tr>
 <tr><td><strong>⚛️ Frontend</strong></td><td>
@@ -234,22 +234,22 @@ npm run dev
 
 ---
 
-## 🎮 Utilisation
+## 🎮 Usage
 
-**Créer un compte** (pas encore d'UI d'inscription) :
+**Create an account** (no sign-up UI yet):
 
-1. Ouvre http://localhost:8000/docs
-2. `POST /auth/register` → **Try it out** → renseigne `email` + `password` → **Execute**
-3. Réponse attendue : `{"message": "Utilisateur cree"}`
+1. Open http://localhost:8000/docs
+2. `POST /auth/register` → **Try it out** → fill in `email` + `password` → **Execute**
+3. Expected response: `{"message": "Utilisateur cree"}`
 
-**Se connecter** :
+**Log in**:
 
-1. Ouvre http://localhost:5173
-2. Connecte-toi → tu arrives sur le tableau de bord avec les deux modules
+1. Open http://localhost:5173
+2. Sign in → you land on the dashboard with both modules
 
 ---
 
-## 📂 Structure du projet
+## 📂 Project structure
 
 ```
 baitway/
@@ -258,9 +258,9 @@ baitway/
 │   │   ├── 📁 core/          → config · database · security · deps
 │   │   ├── 📁 models/        → user.py
 │   │   ├── 📁 routers/       → auth · phishing (Youssef) · ioc (Iheb)
-│   │   ├── 📁 schemas/       → schémas Pydantic
-│   │   └── 📄 main.py        → point d'entrée FastAPI
-│   ├── 📁 migrations/        → migrations Alembic
+│   │   ├── 📁 schemas/       → Pydantic schemas
+│   │   └── 📄 main.py        → FastAPI entry point
+│   ├── 📁 migrations/        → Alembic migrations
 │   ├── 📄 .env.example
 │   └── 📄 requirements.txt
 │
@@ -274,7 +274,7 @@ baitway/
 │       └── 📄 main.jsx       → AuthProvider
 │
 ├── 📁 docs/
-│   └── 📄 api-contract.md    → contrat d'API partagé
+│   └── 📄 api-contract.md    → shared API contract
 ├── 📄 docker-compose.yml
 └── 📄 README.md
 ```
@@ -283,37 +283,37 @@ baitway/
 
 ## 🔌 API
 
-Documentation interactive complète : http://localhost:8000/docs
-Contrat détaillé : [`docs/api-contract.md`](docs/api-contract.md)
+Full interactive documentation: http://localhost:8000/docs
+Detailed contract: [`docs/api-contract.md`](docs/api-contract.md)
 
-| Méthode | Endpoint | Description | 🔒 |
+| Method | Endpoint | Description | 🔒 |
 |---|---|---|:---:|
-| `GET` | `/health` | État du serveur | — |
-| `POST` | `/auth/register` | Créer un compte | — |
-| `POST` | `/auth/login` | Se connecter (JWT) | — |
-| `POST` | `/phishing/analyze` | Analyser un e-mail | ✅ |
-| `GET` | `/phishing/submissions` | File de triage | ✅ |
-| `GET` | `/phishing/submissions/{id}` | Détail d'une soumission | ✅ |
-| `PATCH` | `/phishing/submissions/{id}` | Mettre à jour un verdict | ✅ |
-| `POST` | `/ioc/lookup` | Enrichir un indicateur | ✅ |
-| `GET` | `/ioc/history` | Historique des recherches | ✅ |
-| `GET` | `/ioc/lookups/{id}` | Détail d'une recherche | ✅ |
-| `GET` | `/ioc/export` | Exporter les indicateurs | ✅ |
+| `GET` | `/health` | Server status | — |
+| `POST` | `/auth/register` | Create an account | — |
+| `POST` | `/auth/login` | Log in (JWT) | — |
+| `POST` | `/phishing/analyze` | Analyse an email | ✅ |
+| `GET` | `/phishing/submissions` | Triage queue | ✅ |
+| `GET` | `/phishing/submissions/{id}` | Submission details | ✅ |
+| `PATCH` | `/phishing/submissions/{id}` | Update a verdict | ✅ |
+| `POST` | `/ioc/lookup` | Enrich an indicator | ✅ |
+| `GET` | `/ioc/history` | Search history | ✅ |
+| `GET` | `/ioc/lookups/{id}` | Lookup details | ✅ |
+| `GET` | `/ioc/export` | Export indicators | ✅ |
 
 ---
 
-## 👥 Organisation & Workflow Git
+## 👥 Team organisation & Git workflow
 
-| Périmètre | Responsable | Branche |
+| Scope | Owner | Branch |
 |---|---|---|
-| 🛡️ Socle commun | Youssef & Iheb | `main` / `develop` |
+| 🛡️ Shared foundation | Youssef & Iheb | `main` / `develop` |
 | 🎣 Module A — Phishing | Youssef Ben Chaouacha | `feature/phishing-module` |
 | 🔍 Module B — IOC | Iheb Ben Massaoud | `feature/ioc-module` |
-| 🔗 Intégration | Youssef & Iheb | `develop` → `main` |
+| 🔗 Integration | Youssef & Iheb | `develop` → `main` |
 
-**Règles :** `main` = stable uniquement · `develop` = intégration · chaque feature via Pull Request relue par l'autre · **jamais de commit direct sur `main`/`develop`**.
+**Rules:** `main` = stable only · `develop` = integration · every feature goes through a Pull Request reviewed by the other · **never commit directly to `main`/`develop`**.
 
-**Commits** ([Conventional Commits](https://www.conventionalcommits.org/)) : `feat:` · `fix:` · `docs:` · `chore:` · `refactor:`
+**Commits** ([Conventional Commits](https://www.conventionalcommits.org/)): `feat:` · `fix:` · `docs:` · `chore:` · `refactor:`
 
 ```cmd
 git checkout develop && git pull
@@ -322,20 +322,20 @@ git checkout -b feature/phishing-module
 
 ---
 
-## 🩺 Dépannage
+## 🩺 Troubleshooting
 
 <details>
-<summary><strong>❌ « password authentication failed for user "baitway_admin" »</strong></summary>
+<summary><strong>❌ "password authentication failed for user 'baitway_admin'"</strong></summary>
 
 <br/>
 
-Un autre PostgreSQL écoute sur le port. Vérifie :
+Another PostgreSQL instance is listening on the port. Check with:
 
 ```cmd
 netstat -ano | findstr :5433
 ```
 
-Si plusieurs processus apparaissent, change le port dans `docker-compose.yml` (ex. `5434:5432`), mets à jour `DATABASE_URL`, puis :
+If several processes show up, change the port in `docker-compose.yml` (e.g. `5434:5432`), update `DATABASE_URL`, then:
 
 ```cmd
 docker compose down -v
@@ -346,11 +346,11 @@ alembic upgrade head
 </details>
 
 <details>
-<summary><strong>❌ Erreur 500 à l'inscription (bcrypt)</strong></summary>
+<summary><strong>❌ HTTP 500 on registration (bcrypt)</strong></summary>
 
 <br/>
 
-Incompatibilité passlib / bcrypt récent. Fixe la version :
+passlib / recent bcrypt incompatibility. Pin the version:
 
 ```cmd
 pip install "bcrypt==4.0.1"
@@ -360,75 +360,75 @@ pip freeze > requirements.txt
 </details>
 
 <details>
-<summary><strong>❌ « blocked by CORS policy »</strong></summary>
+<summary><strong>❌ "blocked by CORS policy"</strong></summary>
 
 <br/>
 
-Vérifie que `app/main.py` contient le middleware CORS avec `allow_origins=["http://localhost:5173"]`, puis redémarre uvicorn.
+Check that `app/main.py` includes the CORS middleware with `allow_origins=["http://localhost:5173"]`, then restart uvicorn.
 
 </details>
 
 <details>
-<summary><strong>❌ La migration Alembic ne crée aucune table</strong></summary>
+<summary><strong>❌ The Alembic migration creates no tables</strong></summary>
 
 <br/>
 
-Le modèle n'est pas importé dans `migrations/env.py`. Ajoute `from app.models.user import User` et `target_metadata = Base.metadata`, puis :
+The model is not imported in `migrations/env.py`. Add `from app.models.user import User` and `target_metadata = Base.metadata`, then:
 
 ```cmd
-alembic revision --autogenerate -m "creation table users"
+alembic revision --autogenerate -m "create users table"
 alembic upgrade head
 ```
 
 </details>
 
 <details>
-<summary><strong>❌ « python » ou « docker » non reconnu</strong></summary>
+<summary><strong>❌ "python" or "docker" is not recognised</strong></summary>
 
 <br/>
 
-L'outil n'est pas dans le PATH. Réinstalle-le en cochant « Add to PATH » ou redémarre le terminal.
+The tool is not in your PATH. Reinstall it with "Add to PATH" checked, or restart your terminal.
 
 </details>
 
 ---
 
-## 🗺️ Feuille de route
+## 🗺️ Roadmap
 
-- [x] **Phase 0 — Socle commun** · auth JWT · base de données · app shell · contrat d'API
-- [ ] **Phase 1 — Moteurs** · développement parallèle (données mockées)
-- [ ] **Phase 2 — Interfaces** · développement parallèle des UI
-- [ ] **Phase 3 — Intégration** · dashboard unifié · lien inter-modules · tests
-- [ ] **Phase 4 — Bonus** · scoring ML · export avancé · rapports PDF
+- [x] **Phase 0 — Shared foundation** · JWT auth · database · app shell · API contract
+- [ ] **Phase 1 — Engines** · parallel development (mock data)
+- [ ] **Phase 2 — Interfaces** · parallel UI development
+- [ ] **Phase 3 — Integration** · unified dashboard · cross-module linking · tests
+- [ ] **Phase 4 — Bonus** · ML scoring · advanced export · PDF reports
 
 ---
 
-## 👨‍💻 Équipe
+## 👨‍💻 Team
 
 <table>
 <tr>
 <td align="center" width="50%">
 <strong>Youssef Ben Chaouacha</strong><br/>
-🎣 Module A — Portail Phishing
+🎣 Module A — Phishing Portal
 </td>
 <td align="center" width="50%">
 <strong>Iheb Ben Massaoud</strong><br/>
-🔍 Module B — Recherche d'IOC
+🔍 Module B — IOC Lookup
 </td>
 </tr>
 </table>
 
 <div align="center">
 
-Projet de stage · **ESPRIM** — École Supérieure Privée d'Ingénieurs de Monastir
+Internship project · **ESPRIM** — École Supérieure Privée d'Ingénieurs de Monastir
 
 </div>
 
 ---
 
-## 📄 Licence
+## 📄 License
 
-Distribué sous licence **MIT**. Voir [`LICENSE`](LICENSE) pour plus de détails.
+Released under the **MIT** License. See [`LICENSE`](LICENSE) for details.
 
 <div align="center">
 <br/>
