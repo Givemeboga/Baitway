@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/-BaitWay-1f3864?style=for-the-badge&labelColor=1f3864&color=2f8f88" alt="BaitWay" height="40"/>
+<img src="docs/assets/hero.png" alt="BaitWay — Analyze. Investigate. Triage. Phishing analysis and multi-source IOC intelligence for fast triage." width="100%"/>
 
 # 🎣 BaitWay
 
