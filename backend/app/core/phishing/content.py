@@ -8,7 +8,7 @@ import re
 
 PATTERNS = {
     "content_urgency": (
-        "Ton d'urgence destine a faire agir sans reflechir",
+        "Urgency pressure designed to prevent thinking",
         [
             r"\burgent\b", r"\bimmediat", r"\bimm[ée]diat", r"sous \d+ ?h",
             r"\bexpire", r"\bderni[eè]re? (chance|avertissement|rappel)",
@@ -17,7 +17,7 @@ PATTERNS = {
         ],
     ),
     "content_threat": (
-        "Menace de suspension ou de sanction",
+        "Threat of suspension or penalty",
         [
             r"\bsuspend", r"\bsuspendu", r"\bdesactiv", r"\bd[ée]sactiv",
             r"\bblocked?\b", r"\bbloqu[ée]", r"\bcl[oô]tur", r"\bterminated\b",
@@ -26,7 +26,7 @@ PATTERNS = {
         ],
     ),
     "content_credentials": (
-        "Demande d'identifiants ou de donnees personnelles",
+        "Request for credentials or personal data",
         [
             r"\bmot de passe\b", r"\bpassword\b", r"\bidentifiants?\b",
             r"\bcredentials?\b", r"\bv[ée]rifi(er|ez) votre compte\b",
@@ -36,7 +36,7 @@ PATTERNS = {
         ],
     ),
     "content_money": (
-        "Appat financier (facture, paiement, remboursement)",
+        "Financial bait (invoice, payment, refund)",
         [
             r"\bfacture\b", r"\binvoice\b", r"\bpaiement\b", r"\bpayment\b",
             r"\bremboursement\b", r"\brefund\b", r"\bvirement\b", r"\bwire transfer\b",
@@ -45,7 +45,7 @@ PATTERNS = {
         ],
     ),
     "content_generic_greeting": (
-        "Formule de politesse generique (pas de personnalisation)",
+        "Generic greeting (no personalisation)",
         [
             r"\bcher (client|utilisateur|abonn[ée]|membre)\b",
             r"\bdear (customer|user|sir|madam|account holder)\b",

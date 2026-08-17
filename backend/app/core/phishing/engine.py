@@ -24,8 +24,8 @@ def _build_indicators(header_block, url_entries, attachment_entries, header_sign
                 "type": "ip",
                 "value": origin_ip,
                 "severity": "medium" if auth_failed else "low",
-                "reason": "IP d'origine du message"
-                + (" (authentification en echec)" if auth_failed else ""),
+                "reason": "Originating IP of the message"
+                + (" (authentication failed)" if auth_failed else ""),
             }
         )
 
@@ -39,7 +39,7 @@ def _build_indicators(header_block, url_entries, attachment_entries, header_sign
                     "type": "domain",
                     "value": host_of(entry["url"]),
                     "severity": severity,
-                    "reason": "Domaine sosie d'une marque connue (typosquatting)",
+                    "reason": "Lookalike of a known brand domain (typosquatting)",
                 }
             )
         else:
@@ -48,7 +48,7 @@ def _build_indicators(header_block, url_entries, attachment_entries, header_sign
                     "type": "url",
                     "value": entry["url"],
                     "severity": severity,
-                    "reason": "URL suspecte : " + ", ".join(entry["flags"]),
+                    "reason": "Suspicious URL: " + ", ".join(entry["flags"]),
                 }
             )
 
@@ -60,7 +60,7 @@ def _build_indicators(header_block, url_entries, attachment_entries, header_sign
                 "type": "hash",
                 "value": entry["sha256"],
                 "severity": "high" if entry["reputation"] == "malicious" else "medium",
-                "reason": f"Piece jointe {entry['filename']} : " + ", ".join(entry["flags"]),
+                "reason": f"Attachment {entry['filename']}: " + ", ".join(entry["flags"]),
             }
         )
 

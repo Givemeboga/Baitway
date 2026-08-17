@@ -78,15 +78,15 @@ def analyse_headers(parsed):
     signals = []
     for mechanism in ("spf", "dkim", "dmarc"):
         if auth[mechanism] == "fail":
-            signals.append((f"auth_{mechanism}_fail", f"{mechanism.upper()} en echec"))
+            signals.append((f"auth_{mechanism}_fail", f"{mechanism.upper()} check failed"))
         elif auth[mechanism] == "none":
-            signals.append((f"auth_{mechanism}_none", f"{mechanism.upper()} absent"))
+            signals.append((f"auth_{mechanism}_none", f"{mechanism.upper()} missing"))
 
     from_domain = domain_of(parsed["from_addr"])
     reply_domain = domain_of(parsed["reply_to"])
     if reply_domain and from_domain and reply_domain != from_domain:
         signals.append(
-            ("reply_to_mismatch", f"Reply-To ({reply_domain}) different du From ({from_domain})")
+            ("reply_to_mismatch", f"Reply-To ({reply_domain}) differs from From ({from_domain})")
         )
 
     # Nom d'affichage contenant une adresse differente de l'expediteur reel.
@@ -94,7 +94,7 @@ def analyse_headers(parsed):
     display_match = re.search(r"[\w.+-]+@([\w.-]+)", display)
     if display_match and from_domain and display_match.group(1).lower() != from_domain:
         signals.append(
-            ("display_name_spoof", f"Nom d'affichage usurpe ({display_match.group(1)})")
+            ("display_name_spoof", f"Spoofed display name ({display_match.group(1)})")
         )
 
     block = {

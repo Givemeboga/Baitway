@@ -10,9 +10,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         return {"email": payload["sub"], "role": payload["role"]}
     except JWTError:
-        raise HTTPException(401, "Token invalide")
+        raise HTTPException(401, "Invalid token")
 
 def require_admin(user=Depends(get_current_user)):
     if user["role"] != "admin":
-        raise HTTPException(403, "Acces reserve aux administrateurs")
+        raise HTTPException(403, "Administrators only")
     return user

@@ -17,7 +17,7 @@ from app.models.phishing import PhishingSubmission, SubmissionStatus, Verdict
 SEED = [
     {
         "submission_id": "sub_001",
-        "subject": "Votre compte Microsoft sera suspendu sous 24h",
+        "subject": "Your Microsoft account will be suspended within 24h",
         "sender": "security@micros0ft-verify.com",
         "verdict": Verdict.malicious,
         "risk_score": 87,
@@ -49,7 +49,7 @@ SEED = [
         ],
         "attachments": [
             {
-                "filename": "facture_urgente.pdf.exe",
+                "filename": "urgent_invoice.pdf.exe",
                 "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 "reputation": "malicious",
                 "flags": ["dangerous_extension", "double_extension"],
@@ -60,24 +60,24 @@ SEED = [
                 "type": "domain",
                 "value": "micros0ft-verify.com",
                 "severity": "high",
-                "reason": "Domaine sosie de microsoft.com (typosquatting)",
+                "reason": "Lookalike of microsoft.com (typosquatting)",
             },
             {
                 "type": "ip",
                 "value": "203.0.113.44",
                 "severity": "high",
-                "reason": "IP d'origine signalee pour envoi de spam",
+                "reason": "Originating IP reported for sending spam",
             },
         ],
     },
     {
         "submission_id": "sub_002",
-        "subject": "Facture en attente de reglement",
+        "subject": "Invoice awaiting payment",
         "sender": "compta@fournisseur-express.net",
         "verdict": Verdict.suspicious,
         "risk_score": 54,
         "status": SubmissionStatus.reviewed,
-        "notes": "A confirmer avec le service comptabilite.",
+        "notes": "To be confirmed with the accounting department.",
         "submitted_by": "demo@baitway.local",
         "analyzed_at": datetime(2026, 8, 14, 11, 47, tzinfo=timezone.utc),
         "headers": {
@@ -102,18 +102,18 @@ SEED = [
                 "type": "url",
                 "value": "http://198.51.100.17/facture",
                 "severity": "medium",
-                "reason": "URL pointant directement sur une adresse IP",
+                "reason": "URL pointing directly at an IP address",
             }
         ],
     },
     {
         "submission_id": "sub_003",
-        "subject": "Compte rendu de reunion hebdomadaire",
+        "subject": "Weekly meeting minutes",
         "sender": "direction@esprim.tn",
         "verdict": Verdict.clean,
         "risk_score": 8,
         "status": SubmissionStatus.resolved,
-        "notes": "Faux positif signale par l'utilisateur.",
+        "notes": "False positive reported by the user.",
         "submitted_by": "demo@baitway.local",
         "analyzed_at": datetime(2026, 8, 15, 8, 3, tzinfo=timezone.utc),
         "headers": {
@@ -127,7 +127,7 @@ SEED = [
         "urls": [],
         "attachments": [
             {
-                "filename": "compte_rendu.pdf",
+                "filename": "meeting_minutes.pdf",
                 "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
                 "reputation": "clean",
                 "flags": [],
@@ -149,7 +149,7 @@ def main():
                 .first()
             )
             if exists:
-                print(f"  = {row['submission_id']} deja present, ignore")
+                print(f"  = {row['submission_id']} already present, skipped")
                 continue
             db.add(PhishingSubmission(**row))
             created += 1
@@ -157,7 +157,7 @@ def main():
         db.commit()
     finally:
         db.close()
-    print(f"\n{created} soumission(s) creee(s).")
+    print(f"\n{created} submission(s) created.")
 
 
 if __name__ == "__main__":

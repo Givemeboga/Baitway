@@ -31,7 +31,7 @@ def analyse_attachment(attachment):
 
     if extension in DANGEROUS_EXTENSIONS:
         flags.append("dangerous_extension")
-        signals.append(("attachment_dangerous", f"Extension executable ({filename})"))
+        signals.append(("attachment_dangerous", f"Executable extension ({filename})"))
 
     parts = filename.lower().split(".")
     if len(parts) > 2 and parts[-2] in DECOY_EXTENSIONS:
@@ -40,11 +40,11 @@ def analyse_attachment(attachment):
 
     if extension in MACRO_EXTENSIONS:
         flags.append("macro_enabled")
-        signals.append(("attachment_macro", f"Document a macros ({filename})"))
+        signals.append(("attachment_macro", f"Macro-enabled document ({filename})"))
 
     if extension in ARCHIVE_EXTENSIONS:
         flags.append("archive")
-        signals.append(("attachment_archive", f"Archive pouvant masquer un payload ({filename})"))
+        signals.append(("attachment_archive", f"Archive that may hide a payload ({filename})"))
 
     if extension in DANGEROUS_EXTENSIONS or "double_extension" in flags:
         reputation = "malicious"

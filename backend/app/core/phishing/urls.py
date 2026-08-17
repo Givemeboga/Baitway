@@ -123,7 +123,7 @@ def analyse_url(url):
 
     if host in SHORTENERS or registered_domain(host) in SHORTENERS:
         flags.append("shortener")
-        signals.append(("url_shortener", f"Raccourcisseur d'URL ({host})"))
+        signals.append(("url_shortener", f"URL shortener ({host})"))
 
     is_ip = False
     try:
@@ -133,29 +133,29 @@ def analyse_url(url):
         pass
     if is_ip:
         flags.append("ip_based")
-        signals.append(("url_ip_based", f"URL pointant sur une IP brute ({host})"))
+        signals.append(("url_ip_based", f"URL pointing to a raw IP ({host})"))
 
     imitated = detect_typosquat(host) if not is_ip else None
     if imitated:
         flags.append("typosquat")
-        signals.append(("url_typosquat", f"{host} imite {imitated}"))
+        signals.append(("url_typosquat", f"{host} imitates {imitated}"))
 
     lowered = url.lower()
     if any(word in lowered for word in CREDENTIAL_PATHS):
         flags.append("credential_harvest")
-        signals.append(("url_credential_path", f"Chemin de collecte d'identifiants ({host})"))
+        signals.append(("url_credential_path", f"Credential-harvesting path ({host})"))
 
     if host.startswith("xn--") or ".xn--" in host:
         flags.append("punycode")
-        signals.append(("url_punycode", f"Domaine punycode ({host})"))
+        signals.append(("url_punycode", f"Punycode domain ({host})"))
 
     if any(host.endswith(tld) for tld in SUSPICIOUS_TLDS):
         flags.append("suspicious_tld")
-        signals.append(("url_suspicious_tld", f"Extension a risque ({host})"))
+        signals.append(("url_suspicious_tld", f"Risky TLD ({host})"))
 
     if "@" in re.sub(r"^https?://", "", url).split("/")[0]:
         flags.append("at_obfuscation")
-        signals.append(("url_at_trick", "URL masquant le vrai hote avec un @"))
+        signals.append(("url_at_trick", "URL hiding its real host with an @"))
 
     if url.lower().startswith("http://"):
         flags.append("no_tls")

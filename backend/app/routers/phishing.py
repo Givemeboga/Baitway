@@ -81,7 +81,7 @@ def get_submission_or_404(db, submission_id):
         .first()
     )
     if not submission:
-        raise HTTPException(404, "Soumission introuvable")
+        raise HTTPException(404, "Submission not found")
     return submission
 
 
@@ -95,12 +95,12 @@ def analyze_email(
 ):
     """Soumet un e-mail brut (.eml) pour analyse et enregistre le resultat."""
     if not payload.raw_email.strip():
-        raise HTTPException(400, "E-mail vide")
+        raise HTTPException(400, "Empty email")
 
     try:
         analysis = analyse_raw_email(payload.raw_email)
     except Exception:
-        raise HTTPException(400, "E-mail illisible")
+        raise HTTPException(400, "Unreadable email")
 
     # La decomposition du score n'est pas encore prevue par le contrat d'API.
     analysis.pop("breakdown", None)
