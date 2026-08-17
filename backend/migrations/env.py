@@ -1,4 +1,5 @@
 from app.models.user import User  # noqa: F401 — nécessaire pour l'autogenerate
+from app.models.phishing import PhishingSubmission  # noqa: F401 — idem
 from app.core.database import Base
 
 from logging.config import fileConfig
