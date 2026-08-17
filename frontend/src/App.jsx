@@ -1,16 +1,15 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import PhishingList from "./pages/phishing/PhishingList";
+import PhishingDetail from "./pages/phishing/PhishingDetail";
+import IOCPlaceholder from "./pages/IOCPlaceholder";
 
-function Layout({ children }) {
-  return (
-    <div style={{ display: "flex" }}>
-      <Sidebar />
-      <div style={{ flex: 1 }}>{children}</div>
-    </div>
-  );
+// La coquille (barre laterale + zone de contenu) est portee par AppShell,
+// utilise dans chaque page : plus besoin du Layout global d'origine.
+function Private({ children }) {
+  return <ProtectedRoute>{children}</ProtectedRoute>;
 }
 
 export default function App() {
@@ -18,31 +17,12 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Layout><Dashboard /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/phishing"
-          element={
-            <ProtectedRoute>
-              <Layout><div style={{ padding: 40 }}><h1>Module Phishing (à venir)</h1></div></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/ioc"
-          element={
-            <ProtectedRoute>
-              <Layout><div style={{ padding: 40 }}><h1>Module IOC (à venir)</h1></div></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Login />} />
+        <Route path="/dashboard" element={<Private><Dashboard /></Private>} />
+        <Route path="/phishing" element={<Private><PhishingList /></Private>} />
+        <Route path="/phishing/:id" element={<Private><PhishingDetail /></Private>} />
+        <Route path="/ioc" element={<Private><IOCPlaceholder /></Private>} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );
