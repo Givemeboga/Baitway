@@ -1,9 +1,8 @@
 """Routes du module Phishing (Module A).
 
-Les soumissions sont persistees en base (table phishing_submissions).
-Le moteur d'analyse .eml n'est pas encore branche : POST /analyze enregistre
-pour l'instant un resultat simule. Les schemas de reponse respectent
-docs/api-contract.md.
+Les soumissions sont analysees par le moteur (app.core.phishing) puis
+persistees en base (table phishing_submissions). Les schemas de reponse
+respectent docs/api-contract.md.
 """
 
 import uuid
@@ -14,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
+from app.core.phishing import analyse_raw_email
 from app.models.phishing import PhishingSubmission
 from app.schemas.phishing import AnalyzeRequest, SubmissionUpdate
 
@@ -27,16 +27,16 @@ def iso_utc(value):
     return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def verdict_from_score(score):
-    """Echelle commune aux deux modules : 0-30 clean, 31-70 suspicious, 71+ malicious."""
-    if score <= 30:
-        return "clean"
-    if score <= 70:
-        return "suspicious"
-    return "malicious"
-
-
 # --- Serialisation ----------------------------------------------------------
+
+# Le contrat ne prevoit que ces champs pour une piece jointe ; md5 et size sont
+# calcules et stockes, mais pas exposes tant que le contrat n'a pas evolue.
+ATTACHMENT_FIELDS = ("filename", "sha256", "reputation", "flags")
+
+
+def to_contract_attachment(entry):
+    return {field: entry.get(field) for field in ATTACHMENT_FIELDS}
+
 
 def to_analysis(submission):
     """Reponse d'analyse, strictement limitee aux champs du contrat d'API."""
@@ -46,7 +46,7 @@ def to_analysis(submission):
         "risk_score": submission.risk_score,
         "headers": submission.headers,
         "urls": submission.urls,
-        "attachments": submission.attachments,
+        "attachments": [to_contract_attachment(a) for a in submission.attachments],
         "indicators": submission.indicators,
         "analyzed_at": iso_utc(submission.analyzed_at),
     }
@@ -85,52 +85,6 @@ def get_submission_or_404(db, submission_id):
     return submission
 
 
-# --- Moteur simule ----------------------------------------------------------
-# A remplacer par le parseur .eml + moteur de scoring.
-
-def mock_analysis():
-    """Resultat d'analyse simule, en attendant le moteur .eml."""
-    risk_score = 87
-    return {
-        "subject": "Votre compte Microsoft sera suspendu sous 24h",
-        "sender": "security@micros0ft-verify.com",
-        "risk_score": risk_score,
-        "verdict": verdict_from_score(risk_score),
-        "headers": {
-            "spf": "fail",
-            "dkim": "fail",
-            "dmarc": "fail",
-            "from": "security@micros0ft-verify.com",
-            "reply_to": "collect@mail.ru",
-            "origin_ip": "203.0.113.44",
-        },
-        "urls": [
-            {
-                "url": "http://micros0ft-verify.com/login",
-                "defanged": "hxxp://micros0ft-verify[.]com/login",
-                "reputation": "malicious",
-                "flags": ["typosquat", "credential_harvest"],
-            }
-        ],
-        "attachments": [
-            {
-                "filename": "facture_urgente.pdf.exe",
-                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                "reputation": "malicious",
-                "flags": ["dangerous_extension", "double_extension"],
-            }
-        ],
-        "indicators": [
-            {
-                "type": "domain",
-                "value": "micros0ft-verify.com",
-                "severity": "high",
-                "reason": "Domaine sosie de microsoft.com (typosquatting)",
-            }
-        ],
-    }
-
-
 # --- Routes -----------------------------------------------------------------
 
 @router.post("/analyze")
@@ -143,11 +97,19 @@ def analyze_email(
     if not payload.raw_email.strip():
         raise HTTPException(400, "E-mail vide")
 
+    try:
+        analysis = analyse_raw_email(payload.raw_email)
+    except Exception:
+        raise HTTPException(400, "E-mail illisible")
+
+    # La decomposition du score n'est pas encore prevue par le contrat d'API.
+    analysis.pop("breakdown", None)
+
     submission = PhishingSubmission(
         submission_id="sub_" + uuid.uuid4().hex[:8],
         submitted_by=user["email"],
         analyzed_at=datetime.now(timezone.utc),
-        **mock_analysis(),
+        **analysis,
     )
     db.add(submission)
     db.commit()
