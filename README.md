@@ -53,17 +53,22 @@ Security Operations Center (SOC) teams spend a significant share of their time o
 
 ### 🎣 Module A — Phishing Portal
 
-- 📥 `.eml` email submission (paste or upload)
-- 📨 **Headers** — SPF, DKIM, DMARC, From/Reply-To, originating IP
-- 🔗 **URLs** — defanging, shorteners, lookalike domains, reputation
-- 📎 **Attachments** — MD5/SHA256, dangerous extensions
-- 🎯 Risk score **0–100** + verdict
-- 📋 Triage queue sorted by risk
+![Module A](https://img.shields.io/badge/status-operational-34D399?style=flat-square)
+
+- 📥 `.eml` email submission (paste raw content)
+- 📨 **Headers** — SPF, DKIM, DMARC, Reply-To mismatch, display-name spoofing, originating IP
+- 🔗 **URLs** — defanging, shorteners, typosquatting, punycode, raw-IP hosts, risky TLDs
+- 📎 **Attachments** — MD5/SHA256, dangerous & double extensions, macros, archives
+- 📝 **Content** — urgency, threats, credential requests, financial bait (FR + EN)
+- 🎯 Weighted scoring → risk score **0–100** + verdict
+- 📋 Triage queue sorted by risk, analyst verdict workflow
 
 </td>
 <td width="50%" valign="top">
 
 ### 🔍 Module B — IOC Lookup
+
+![Module B](https://img.shields.io/badge/status-in%20development-F5A524?style=flat-square)
 
 - 🧩 Automatic type detection (IP / domain / URL / hash)
 - 🌐 **Multi-source** — VirusTotal, AbuseIPDB, URLhaus, MalwareBazaar, WHOIS
@@ -85,6 +90,39 @@ Both modules share the same verdict scale:
 | 🟢 `clean` | 0–30 | No sign of malicious activity |
 | 🟠 `suspicious` | 31–70 | Questionable indicators, needs review |
 | 🔴 `malicious` | 71–100 | Confirmed malicious |
+
+---
+
+## 🧠 Phishing analysis engine
+
+`POST /phishing/analyze` runs a raw `.eml` through five analysis passes, then a weighted
+scoring stage. Everything is computed locally — no external API keys required.
+
+```
+.eml ──▶ parser ──▶ headers ──▶ URLs ──▶ attachments ──▶ content ──▶ scoring ──▶ verdict
+```
+
+| Pass | Module | Detects |
+|---|---|---|
+| **Parse** | `parser.py` | headers, text/HTML bodies, attachments |
+| **Headers** | `headers.py` | SPF/DKIM/DMARC results, Reply-To mismatch, spoofed display name, originating IP |
+| **URLs** | `urls.py` | shorteners, typosquatting (homoglyphs + edit distance), punycode, raw-IP hosts, `@` obfuscation, credential paths, risky TLDs |
+| **Attachments** | `attachments.py` | MD5/SHA256, executable & double extensions, macro-enabled documents, archives |
+| **Content** | `content.py` | urgency, threats, credential requests, financial bait — French **and** English |
+| **Scoring** | `scoring.py` | weighted signals, diminishing returns on repeats, → 0–100 → verdict |
+
+Each signal carries a weight and a human-readable reason, so every score is explainable:
+
+```
++30  url_typosquat                0oredoo.tn imitates ooredoo.tn
++30  attachment_dangerous         Executable extension (urgent_invoice.pdf.exe)
++15  auth_spf_fail                SPF check failed
++12  content_credentials          Request for credentials or personal data
+```
+
+> [!NOTE]
+> Attachments are **never executed or written to disk** — they are only hashed in memory.
+> URL reputation is heuristic and local; external threat-intelligence enrichment belongs to Module B.
 
 ---
 
@@ -242,10 +280,22 @@ npm run dev
 2. `POST /auth/register` → **Try it out** → fill in `email` + `password` → **Execute**
 3. Expected response: `{"message": "Utilisateur cree"}`
 
-**Log in**:
+**Load demo data** (optional, from `backend/` with the venv active):
 
-1. Open http://localhost:5173
-2. Sign in → you land on the dashboard with both modules
+```cmd
+python -m scripts.seed_phishing
+```
+
+Inserts three example submissions covering all three verdicts. The script is idempotent.
+
+**Log in and analyse**:
+
+1. Open http://localhost:5173 and sign in → the dashboard shows the triage queue
+2. Go to **Phishing Portal**, paste the raw content of a `.eml` file, and click **Analyze email**
+3. The detail view opens with the verdict, header authentication, defanged URLs,
+   attachment hashes and the extracted indicators
+4. Use **Mark reviewed** / **Mark resolved** and the notes field to record your decision
+5. **Investigate →** on any indicator hands it over to the IOC module
 
 ---
 
@@ -255,27 +305,35 @@ npm run dev
 baitway/
 ├── 📁 backend/
 │   ├── 📁 app/
-│   │   ├── 📁 core/          → config · database · security · deps
-│   │   ├── 📁 models/        → user.py
+│   │   ├── 📁 core/
+│   │   │   ├── 📄 config · database · security · deps
+│   │   │   └── 📁 phishing/  → analysis engine (parser, headers, urls,
+│   │   │                        attachments, content, scoring, engine)
+│   │   ├── 📁 models/        → user.py · phishing.py
 │   │   ├── 📁 routers/       → auth · phishing (Youssef) · ioc (Iheb)
 │   │   ├── 📁 schemas/       → Pydantic schemas
 │   │   └── 📄 main.py        → FastAPI entry point
 │   ├── 📁 migrations/        → Alembic migrations
+│   ├── 📁 scripts/           → seed_phishing.py (demo data)
 │   ├── 📄 .env.example
 │   └── 📄 requirements.txt
 │
 ├── 📁 frontend/
 │   └── 📁 src/
+│       ├── 📄 theme.js       → design tokens (colors, typography, spacing)
+│       ├── 📁 lib/           → verdict scale · JWT claims · breakpoints
+│       ├── 📁 api/           → client.js (Axios + JWT) · phishing.js · errors.js
 │       ├── 📁 context/       → AuthContext.jsx
-│       ├── 📁 api/           → client.js (Axios + JWT)
-│       ├── 📁 components/    → Sidebar · ProtectedRoute
+│       ├── 📁 components/    → AppShell · Sidebar · Logo · ProtectedRoute · ui/
 │       ├── 📁 pages/         → Login · Dashboard · phishing/ · ioc/
 │       ├── 📄 App.jsx        → routing
 │       └── 📄 main.jsx       → AuthProvider
 │
 ├── 📁 docs/
-│   └── 📄 api-contract.md    → shared API contract
+│   ├── 📄 api-contract.md    → shared API contract
+│   └── 📁 assets/            → README images
 ├── 📄 docker-compose.yml
+├── 📄 LICENSE
 └── 📄 README.md
 ```
 
@@ -286,19 +344,21 @@ baitway/
 Full interactive documentation: http://localhost:8000/docs
 Detailed contract: [`docs/api-contract.md`](docs/api-contract.md)
 
-| Method | Endpoint | Description | 🔒 |
-|---|---|---|:---:|
-| `GET` | `/health` | Server status | — |
-| `POST` | `/auth/register` | Create an account | — |
-| `POST` | `/auth/login` | Log in (JWT) | — |
-| `POST` | `/phishing/analyze` | Analyse an email | ✅ |
-| `GET` | `/phishing/submissions` | Triage queue | ✅ |
-| `GET` | `/phishing/submissions/{id}` | Submission details | ✅ |
-| `PATCH` | `/phishing/submissions/{id}` | Update a verdict | ✅ |
-| `POST` | `/ioc/lookup` | Enrich an indicator | ✅ |
-| `GET` | `/ioc/history` | Search history | ✅ |
-| `GET` | `/ioc/lookups/{id}` | Lookup details | ✅ |
-| `GET` | `/ioc/export` | Export indicators | ✅ |
+| Method | Endpoint | Description | 🔒 | Status |
+|---|---|---|:---:|:---:|
+| `GET` | `/health` | Server status | — | ✅ live |
+| `POST` | `/auth/register` | Create an account | — | ✅ live |
+| `POST` | `/auth/login` | Log in (JWT) | — | ✅ live |
+| `POST` | `/phishing/analyze` | Analyse an email | ✅ | ✅ live |
+| `GET` | `/phishing/submissions` | Triage queue | ✅ | ✅ live |
+| `GET` | `/phishing/submissions/{id}` | Submission details | ✅ | ✅ live |
+| `PATCH` | `/phishing/submissions/{id}` | Update a verdict | ✅ | ✅ live |
+| `POST` | `/ioc/lookup` | Enrich an indicator | ✅ | 🚧 planned |
+| `GET` | `/ioc/history` | Search history | ✅ | 🚧 planned |
+| `GET` | `/ioc/lookups/{id}` | Lookup details | ✅ | 🚧 planned |
+| `GET` | `/ioc/export` | Export indicators | ✅ | 🚧 planned |
+
+**App routes** — `/login` · `/dashboard` · `/phishing` · `/phishing/:id` · `/ioc`
 
 ---
 
@@ -396,8 +456,12 @@ The tool is not in your PATH. Reinstall it with "Add to PATH" checked, or restar
 ## 🗺️ Roadmap
 
 - [x] **Phase 0 — Shared foundation** · JWT auth · database · app shell · API contract
-- [ ] **Phase 1 — Engines** · parallel development (mock data)
+- [ ] **Phase 1 — Engines** · parallel development
+  - [x] Module A — `.eml` analysis engine, persistence, weighted scoring
+  - [ ] Module B — IOC enrichment across threat-intelligence sources
 - [ ] **Phase 2 — Interfaces** · parallel UI development
+  - [x] Module A — submission form, triage queue, detail view, verdict workflow
+  - [ ] Module B — lookup form, sources, history
 - [ ] **Phase 3 — Integration** · unified dashboard · cross-module linking · tests
 - [ ] **Phase 4 — Bonus** · ML scoring · advanced export · PDF reports
 
