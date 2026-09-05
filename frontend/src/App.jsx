@@ -1,8 +1,9 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+﻿import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import IOCLookup from "./pages/ioc/IOCLookup";
 
 function Layout({ children }) {
   return (
@@ -30,7 +31,7 @@ export default function App() {
           path="/phishing"
           element={
             <ProtectedRoute>
-              <Layout><div style={{ padding: 40 }}><h1>Module Phishing (à venir)</h1></div></Layout>
+              <Layout><div style={{ padding: 40 }}><h1>Module Phishing (a venir)</h1></div></Layout>
             </ProtectedRoute>
           }
         />
@@ -38,7 +39,7 @@ export default function App() {
           path="/ioc"
           element={
             <ProtectedRoute>
-              <Layout><div style={{ padding: 40 }}><h1>Module IOC (à venir)</h1></div></Layout>
+              <Layout><IOCLookup /></Layout>
             </ProtectedRoute>
           }
         />
