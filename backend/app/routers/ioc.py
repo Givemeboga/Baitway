@@ -1,4 +1,5 @@
-﻿from datetime import datetime, timezone
+﻿import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
@@ -10,6 +11,7 @@ from app.schemas.ioc import LookupRequest
 from app.services.ioc_detector import detect_ioc_type
 from app.services.ioc_enrichment import enrich_indicator
 from app.services.verdict import calculate_verdict
+from app.models.ioc import IOCLookup
 
 router = APIRouter(prefix="/ioc", tags=["ioc"])
 
@@ -53,7 +55,7 @@ MOCK_LOOKUPS = [
 
 
 # ---------------------------------------------------------
-# 1. POST /ioc/lookup — NOW REAL ENRICHMENT
+# 1. POST /ioc/lookup — REAL ENRICHMENT + REAL DB SAVE
 # ---------------------------------------------------------
 
 @router.post("/lookup")
@@ -75,20 +77,38 @@ def lookup(
     sources, enrichment = enrich_indicator(indicator, ioc_type)
     verdict, risk_score = calculate_verdict(sources)
 
+    lookup_id = str(uuid.uuid4())
+    looked_up_at = datetime.now(timezone.utc)
+
+    db_lookup = IOCLookup(
+        lookup_id=lookup_id,
+        indicator=indicator,
+        type=ioc_type,
+        verdict=verdict,
+        risk_score=risk_score,
+        looked_up_at=looked_up_at,
+        sources=sources,
+        enrichment=enrichment,
+    )
+
+    db.add(db_lookup)
+    db.commit()
+    db.refresh(db_lookup)
+
     return {
-        "lookup_id": "real-001",  # placeholder until DB save (next phase)
+        "lookup_id": lookup_id,
         "indicator": indicator,
         "type": ioc_type,
         "verdict": verdict,
         "risk_score": risk_score,
         "sources": sources,
         "enrichment": enrichment,
-        "looked_up_at": datetime.now(timezone.utc).isoformat()
+        "looked_up_at": looked_up_at.isoformat()
     }
 
 
 # ---------------------------------------------------------
-# 2. GET /ioc/history (still mock)
+# 2. GET /ioc/history (still mock — next phase)
 # ---------------------------------------------------------
 
 @router.get("/history")
@@ -103,7 +123,7 @@ def history(db: Session = Depends(get_db), user=Depends(get_current_user)):
 
 
 # ---------------------------------------------------------
-# 3. GET /ioc/lookups/{id} (still mock)
+# 3. GET /ioc/lookups/{id} (still mock — next phase)
 # ---------------------------------------------------------
 
 @router.get("/lookups/{lookup_id}")
@@ -115,7 +135,7 @@ def get_lookup(lookup_id: str, db: Session = Depends(get_db), user=Depends(get_c
 
 
 # ---------------------------------------------------------
-# 4. GET /ioc/export (still mock)
+# 4. GET /ioc/export (still mock — next phase)
 # ---------------------------------------------------------
 
 @router.get("/export")
