@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60
     virustotal_api_key: str = ""
     abusech_auth_key: str = ""
+    abuseipdb_api_key: str = ""
 
     class Config:
         env_file = ".env"
