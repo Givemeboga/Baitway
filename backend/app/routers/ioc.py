@@ -17,45 +17,7 @@ router = APIRouter(prefix="/ioc", tags=["ioc"])
 
 
 # ---------------------------------------------------------
-# Mock data (still used for history/detail/export for now)
-# ---------------------------------------------------------
-
-MOCK_LOOKUPS = [
-    {
-        "lookup_id": "mock-001",
-        "indicator": "8.8.8.8",
-        "type": "ip",
-        "verdict": "suspicious",
-        "risk_score": 50,
-        "sources": [
-            {"name": "MockSource", "result": "suspicious", "score": 50, "raw": {}}
-        ],
-        "enrichment": {
-            "geolocation": None, "asn": None, "domain_age_days": None,
-            "registrar": None, "blacklisted": False
-        },
-        "looked_up_at": "2026-09-05T00:00:00Z"
-    },
-    {
-        "lookup_id": "mock-002",
-        "indicator": "example.com",
-        "type": "domain",
-        "verdict": "clean",
-        "risk_score": 10,
-        "sources": [
-            {"name": "MockSource", "result": "clean", "score": 10, "raw": {}}
-        ],
-        "enrichment": {
-            "geolocation": None, "asn": None, "domain_age_days": 1000,
-            "registrar": "Example Registrar", "blacklisted": False
-        },
-        "looked_up_at": "2026-09-05T00:05:00Z"
-    }
-]
-
-
-# ---------------------------------------------------------
-# 1. POST /ioc/lookup — REAL ENRICHMENT + REAL DB SAVE
+# 1. POST /ioc/lookup
 # ---------------------------------------------------------
 
 @router.post("/lookup")
@@ -108,34 +70,55 @@ def lookup(
 
 
 # ---------------------------------------------------------
-# 2. GET /ioc/history (still mock — next phase)
+# 2. GET /ioc/history — REAL DB QUERY
 # ---------------------------------------------------------
 
 @router.get("/history")
 def history(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    lookups = (
+        db.query(IOCLookup)
+        .order_by(IOCLookup.looked_up_at.desc())
+        .all()
+    )
+
     return [
         {
-            "lookup_id": l["lookup_id"], "indicator": l["indicator"], "type": l["type"],
-            "verdict": l["verdict"], "risk_score": l["risk_score"], "looked_up_at": l["looked_up_at"]
+            "lookup_id": l.lookup_id,
+            "indicator": l.indicator,
+            "type": l.type,
+            "verdict": l.verdict,
+            "risk_score": l.risk_score,
+            "looked_up_at": l.looked_up_at.isoformat(),
         }
-        for l in MOCK_LOOKUPS
+        for l in lookups
     ]
 
 
 # ---------------------------------------------------------
-# 3. GET /ioc/lookups/{id} (still mock — next phase)
+# 3. GET /ioc/lookups/{id} — REAL DB QUERY
 # ---------------------------------------------------------
 
 @router.get("/lookups/{lookup_id}")
 def get_lookup(lookup_id: str, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    for l in MOCK_LOOKUPS:
-        if l["lookup_id"] == lookup_id:
-            return l
-    raise HTTPException(status_code=404, detail="Lookup not found")
+    l = db.query(IOCLookup).filter(IOCLookup.lookup_id == lookup_id).first()
+
+    if not l:
+        raise HTTPException(status_code=404, detail="Lookup not found")
+
+    return {
+        "lookup_id": l.lookup_id,
+        "indicator": l.indicator,
+        "type": l.type,
+        "verdict": l.verdict,
+        "risk_score": l.risk_score,
+        "sources": l.sources,
+        "enrichment": l.enrichment,
+        "looked_up_at": l.looked_up_at.isoformat(),
+    }
 
 
 # ---------------------------------------------------------
-# 4. GET /ioc/export (still mock — next phase)
+# 4. GET /ioc/export — REAL DB QUERY
 # ---------------------------------------------------------
 
 @router.get("/export")
@@ -150,17 +133,19 @@ def export(
     if verdict not in ["all", "malicious", "suspicious"]:
         raise HTTPException(status_code=400, detail="Verdict must be all, malicious or suspicious")
 
-    filtered = MOCK_LOOKUPS
+    query = db.query(IOCLookup)
     if verdict != "all":
-        filtered = [l for l in MOCK_LOOKUPS if l["verdict"] == verdict]
+        query = query.filter(IOCLookup.verdict == verdict)
+
+    lookups = query.order_by(IOCLookup.looked_up_at.desc()).all()
 
     if format == "csv":
         lines = ["lookup_id,indicator,type,verdict,risk_score,looked_up_at"]
-        for l in filtered:
-            lines.append(f'{l["lookup_id"]},{l["indicator"]},{l["type"]},{l["verdict"]},{l["risk_score"]},{l["looked_up_at"]}')
+        for l in lookups:
+            lines.append(f'{l.lookup_id},{l.indicator},{l.type},{l.verdict},{l.risk_score},{l.looked_up_at.isoformat()}')
         return PlainTextResponse(content="\n".join(lines), media_type="text/csv",
                                   headers={"Content-Disposition": "attachment; filename=ioc_export.csv"})
 
-    lines = [l["indicator"] for l in filtered]
+    lines = [l.indicator for l in lookups]
     return PlainTextResponse(content="\n".join(lines), media_type="text/plain",
                               headers={"Content-Disposition": "attachment; filename=ioc_blocklist.txt"})
