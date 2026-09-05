@@ -1,5 +1,5 @@
 ﻿import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
@@ -15,9 +15,11 @@ from app.models.ioc import IOCLookup
 
 router = APIRouter(prefix="/ioc", tags=["ioc"])
 
+CACHE_TTL_MINUTES = 60
+
 
 # ---------------------------------------------------------
-# 1. POST /ioc/lookup
+# 1. POST /ioc/lookup — with caching
 # ---------------------------------------------------------
 
 @router.post("/lookup")
@@ -36,6 +38,29 @@ def lookup(
     except ValueError:
         raise HTTPException(status_code=400, detail="Unrecognized indicator format")
 
+    # Check cache first — avoid burning external API quota on repeat lookups
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=CACHE_TTL_MINUTES)
+    cached = (
+        db.query(IOCLookup)
+        .filter(IOCLookup.indicator == indicator)
+        .filter(IOCLookup.looked_up_at >= cutoff)
+        .order_by(IOCLookup.looked_up_at.desc())
+        .first()
+    )
+
+    if cached:
+        return {
+            "lookup_id": cached.lookup_id,
+            "indicator": cached.indicator,
+            "type": cached.type,
+            "verdict": cached.verdict,
+            "risk_score": cached.risk_score,
+            "sources": cached.sources,
+            "enrichment": cached.enrichment,
+            "looked_up_at": cached.looked_up_at.isoformat(),
+        }
+
+    # No recent cache hit — run real enrichment
     sources, enrichment = enrich_indicator(indicator, ioc_type)
     verdict, risk_score = calculate_verdict(sources)
 
@@ -70,7 +95,7 @@ def lookup(
 
 
 # ---------------------------------------------------------
-# 2. GET /ioc/history — REAL DB QUERY
+# 2. GET /ioc/history
 # ---------------------------------------------------------
 
 @router.get("/history")
@@ -95,7 +120,7 @@ def history(db: Session = Depends(get_db), user=Depends(get_current_user)):
 
 
 # ---------------------------------------------------------
-# 3. GET /ioc/lookups/{id} — REAL DB QUERY
+# 3. GET /ioc/lookups/{id}
 # ---------------------------------------------------------
 
 @router.get("/lookups/{lookup_id}")
@@ -118,7 +143,7 @@ def get_lookup(lookup_id: str, db: Session = Depends(get_db), user=Depends(get_c
 
 
 # ---------------------------------------------------------
-# 4. GET /ioc/export — REAL DB QUERY
+# 4. GET /ioc/export
 # ---------------------------------------------------------
 
 @router.get("/export")
