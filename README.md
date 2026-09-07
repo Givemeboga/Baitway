@@ -11,7 +11,7 @@ email analysis and indicator-of-compromise lookup.
 
 <br/>
 
-![status](https://img.shields.io/badge/status-in%20development-orange?style=flat-square)
+![status](https://img.shields.io/badge/status-both%20modules%20operational-34D399?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)
@@ -68,13 +68,13 @@ Security Operations Center (SOC) teams spend a significant share of their time o
 
 ### 🔍 Module B — IOC Lookup
 
-![Module B](https://img.shields.io/badge/status-in%20development-F5A524?style=flat-square)
+![Module B](https://img.shields.io/badge/status-operational-34D399?style=flat-square)
 
-- 🧩 Automatic type detection (IP / domain / URL / hash)
-- 🌐 **Multi-source** — VirusTotal, AbuseIPDB, URLhaus, MalwareBazaar, WHOIS
-- ⚖️ Aggregation into a single verdict
-- ⚡ Caching (respects API quotas)
-- 🕓 Search history
+- 🧩 Automatic type detection — hash, URL, IP, validated domain
+- 🌐 **Multi-source** — VirusTotal, AbuseIPDB, URLhaus, MalwareBazaar, WHOIS/RDAP
+- ⚖️ Aggregation into a single verdict on the shared 0–100 scale
+- ⚡ 60-minute cache — repeat lookups never burn API quota
+- 🕓 Search history and full lookup detail
 - 📤 CSV / blocklist export
 
 </td>
@@ -126,6 +126,43 @@ Each signal carries a weight and a human-readable reason, so every score is expl
 
 ---
 
+## 🔎 IOC enrichment engine
+
+`POST /ioc/lookup` takes a bare indicator, decides what it is, then queries only the
+sources that apply to that type.
+
+```
+indicator ──▶ type detection ──▶ cache hit? ──▶ sources ──▶ aggregation ──▶ verdict
+```
+
+**Type detection** runs most-specific first, and refuses rather than guessing: a 32/40/64-character
+hex string is a hash, an `http(s)://` prefix is a URL, anything that parses as an address is an IP,
+and a validated hostname pattern is a domain. An unrecognised string is rejected instead of being
+treated as a domain by default.
+
+| Source | Applies to | API key |
+|---|---|:---:|
+| VirusTotal | all types | required |
+| AbuseIPDB | IP | required |
+| URLhaus | URL | — |
+| MalwareBazaar | hash | — |
+| WHOIS / RDAP | domain (registrar, age) | — |
+
+**Aggregation** takes the **highest** score among sources that actually returned data,
+ignoring those reporting `unknown`. A single strong signal — a MalwareBazaar hit, say —
+is therefore not diluted by unrelated sources that had nothing to say. The result maps
+onto the same 0–100 scale as Module A.
+
+> [!TIP]
+> Lookups are cached for **60 minutes**. Repeating an indicator returns the stored result
+> instead of spending free-tier API quota.
+
+> [!NOTE]
+> Without API keys the module still runs: keyed sources report `unknown` and are excluded
+> from the verdict rather than failing the request.
+
+---
+
 ## 🏗️ Architecture
 
 ```mermaid
@@ -143,7 +180,8 @@ flowchart LR
     PH --> DB
     IOC --> DB
 
-    IOC -.->|enrichment| TI[🌐 Threat Intelligence<br/>VirusTotal · AbuseIPDB · URLhaus]
+    IOC -.->|enrichment| TI[🌐 Threat Intelligence<br/>VirusTotal · AbuseIPDB<br/>URLhaus · MalwareBazaar · RDAP]
+    PH -.->|extracted indicators| IOC
 ```
 
 ### 🧰 Tech stack
@@ -151,7 +189,7 @@ flowchart LR
 | Layer | Technology | Role |
 |---|---|---|
 | **Backend** | Python 3.11+ · FastAPI | REST API, analysis engines |
-| **Frontend** | React 18 · Vite | Interfaces & app shell |
+| **Frontend** | React 19 · Vite | Interfaces & app shell |
 | **Database** | PostgreSQL 16 | Data persistence |
 | **ORM / Migrations** | SQLAlchemy · Alembic | Schema modelling & versioning |
 | **Auth** | JWT (python-jose) · bcrypt | Sessions & roles |
@@ -224,7 +262,16 @@ DATABASE_URL=postgresql://baitway_admin:baitway_password@localhost:5433/baitway
 JWT_SECRET=replace_with_a_secret_key
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=60
+
+# Module B — threat-intelligence sources (optional; blank = source reports "unknown")
+VIRUSTOTAL_API_KEY=
+ABUSEIPDB_API_KEY=
+ABUSECH_AUTH_KEY=
 ```
+
+> [!NOTE]
+> The API keys are optional. Without them, URLhaus, MalwareBazaar and WHOIS/RDAP still work;
+> VirusTotal and AbuseIPDB simply report `unknown` and are left out of the verdict.
 
 > [!TIP]
 > Generate a strong secret key:
@@ -295,7 +342,12 @@ Inserts three example submissions covering all three verdicts. The script is ide
 3. The detail view opens with the verdict, header authentication, defanged URLs,
    attachment hashes and the extracted indicators
 4. Use **Mark reviewed** / **Mark resolved** and the notes field to record your decision
-5. **Investigate →** on any indicator hands it over to the IOC module
+5. **Investigate →** on any indicator opens the IOC lookup with it pre-filled, runs the
+   enrichment, and offers a link back to the originating analysis
+
+**Look up an indicator directly**: go to **IOC Lookup**, paste an IP, domain, URL or file hash —
+the type is detected server-side. Results are cached for an hour, and the history can be
+exported as CSV or as a blocklist.
 
 ---
 
@@ -309,7 +361,13 @@ baitway/
 │   │   │   ├── 📄 config · database · security · deps
 │   │   │   └── 📁 phishing/  → analysis engine (parser, headers, urls,
 │   │   │                        attachments, content, scoring, engine)
-│   │   ├── 📁 models/        → user.py · phishing.py
+│   │   ├── 📁 services/      → IOC module (Module B)
+│   │   │   ├── 📄 ioc_detector.py   → indicator type detection
+│   │   │   ├── 📄 ioc_enrichment.py → source orchestration
+│   │   │   ├── 📄 verdict.py        → score aggregation
+│   │   │   └── 📁 enrichment/       → virustotal · abuseipdb · urlhaus
+│   │   │                              malwarebazaar · whois_rdap
+│   │   ├── 📁 models/        → user.py · phishing.py · ioc.py
 │   │   ├── 📁 routers/       → auth · phishing (Youssef) · ioc (Iheb)
 │   │   ├── 📁 schemas/       → Pydantic schemas
 │   │   └── 📄 main.py        → FastAPI entry point
@@ -322,7 +380,7 @@ baitway/
 │   └── 📁 src/
 │       ├── 📄 theme.js       → design tokens (colors, typography, spacing)
 │       ├── 📁 lib/           → verdict scale · JWT claims · breakpoints
-│       ├── 📁 api/           → client.js (Axios + JWT) · phishing.js · errors.js
+│       ├── 📁 api/           → client.js (Axios + JWT) · phishing.js · ioc.js · errors.js
 │       ├── 📁 context/       → AuthContext.jsx
 │       ├── 📁 components/    → AppShell · Sidebar · Logo · ProtectedRoute · ui/
 │       ├── 📁 pages/         → Login · Dashboard · phishing/ · ioc/
@@ -353,10 +411,10 @@ Detailed contract: [`docs/api-contract.md`](docs/api-contract.md)
 | `GET` | `/phishing/submissions` | Triage queue | ✅ | ✅ live |
 | `GET` | `/phishing/submissions/{id}` | Submission details | ✅ | ✅ live |
 | `PATCH` | `/phishing/submissions/{id}` | Update a verdict | ✅ | ✅ live |
-| `POST` | `/ioc/lookup` | Enrich an indicator | ✅ | 🚧 planned |
-| `GET` | `/ioc/history` | Search history | ✅ | 🚧 planned |
-| `GET` | `/ioc/lookups/{id}` | Lookup details | ✅ | 🚧 planned |
-| `GET` | `/ioc/export` | Export indicators | ✅ | 🚧 planned |
+| `POST` | `/ioc/lookup` | Enrich an indicator | ✅ | ✅ live |
+| `GET` | `/ioc/history` | Search history | ✅ | ✅ live |
+| `GET` | `/ioc/lookups/{id}` | Lookup details | ✅ | ✅ live |
+| `GET` | `/ioc/export` | Export indicators | ✅ | ✅ live |
 
 **App routes** — `/login` · `/dashboard` · `/phishing` · `/phishing/:id` · `/ioc`
 
@@ -364,21 +422,26 @@ Detailed contract: [`docs/api-contract.md`](docs/api-contract.md)
 
 ## 👥 Team organisation & Git workflow
 
-| Scope | Owner | Branch |
-|---|---|---|
-| 🛡️ Shared foundation | Youssef & Iheb | `main` / `develop` |
-| 🎣 Module A — Phishing | Youssef Ben Chaouacha | `feature/phishing-module` |
-| 🔍 Module B — IOC | Iheb Ben Massaoud | `feature/ioc-module` |
-| 🔗 Integration | Youssef & Iheb | `develop` → `main` |
+| Scope | Owner | Branch | State |
+|---|---|---|---|
+| 🛡️ Shared foundation | Youssef & Iheb | `main` | stable |
+| 🎣 Module A — Phishing | Youssef Ben Chaouacha | `feature/phishing-module` | merged with Module B |
+| 🔍 Module B — IOC | Iheb Ben Massaoud | `feature/ioc-module` | merged into Module A's branch |
+| 🔗 Integration | Youssef & Iheb | `feature/phishing-module` → `main` | pending Pull Request |
 
-**Rules:** `main` = stable only · `develop` = integration · every feature goes through a Pull Request reviewed by the other · **never commit directly to `main`/`develop`**.
+**Rules:** `main` = stable only · every feature goes through a Pull Request reviewed by the other ·
+**never commit directly to `main`** · **no one edits `docs/api-contract.md` alone**.
 
 **Commits** ([Conventional Commits](https://www.conventionalcommits.org/)): `feat:` · `fix:` · `docs:` · `chore:` · `refactor:`
 
 ```cmd
-git checkout develop && git pull
-git checkout -b feature/phishing-module
+git checkout main && git pull
+git checkout -b feature/my-feature
 ```
+
+> [!IMPORTANT]
+> Both module branches are now integrated on `feature/phishing-module`. Pull that branch before
+> starting new work, otherwise you will resolve the same merge conflicts a second time.
 
 ---
 
@@ -429,6 +492,24 @@ Check that `app/main.py` includes the CORS middleware with `allow_origins=["http
 </details>
 
 <details>
+<summary><strong>❌ "Multiple head revisions are present" on <code>alembic upgrade head</code></strong></summary>
+
+<br/>
+
+Two branches each added a migration on top of the same parent, so Alembic has two heads and cannot
+pick one. List them, then reunite them with a merge revision:
+
+```cmd
+alembic heads
+alembic merge -m "merge heads" <revision1> <revision2>
+alembic upgrade head
+```
+
+Commit the generated merge revision — it belongs in the repository like any other migration.
+
+</details>
+
+<details>
 <summary><strong>❌ The Alembic migration creates no tables</strong></summary>
 
 <br/>
@@ -456,13 +537,16 @@ The tool is not in your PATH. Reinstall it with "Add to PATH" checked, or restar
 ## 🗺️ Roadmap
 
 - [x] **Phase 0 — Shared foundation** · JWT auth · database · app shell · API contract
-- [ ] **Phase 1 — Engines** · parallel development
+- [x] **Phase 1 — Engines** · parallel development
   - [x] Module A — `.eml` analysis engine, persistence, weighted scoring
-  - [ ] Module B — IOC enrichment across threat-intelligence sources
-- [ ] **Phase 2 — Interfaces** · parallel UI development
+  - [x] Module B — IOC enrichment across threat-intelligence sources, caching
+- [x] **Phase 2 — Interfaces** · parallel UI development
   - [x] Module A — submission form, triage queue, detail view, verdict workflow
-  - [ ] Module B — lookup form, sources, history
+  - [x] Module B — lookup form, sources, history, export
 - [ ] **Phase 3 — Integration** · unified dashboard · cross-module linking · tests
+  - [x] Branches merged, Alembic heads reconciled, both modules running together
+  - [x] Phishing → IOC bridge wired end to end
+  - [ ] Automated test suite in CI
 - [ ] **Phase 4 — Bonus** · ML scoring · advanced export · PDF reports
 
 ---
