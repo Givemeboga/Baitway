@@ -18,6 +18,23 @@ router = APIRouter(prefix="/ioc", tags=["ioc"])
 CACHE_TTL_MINUTES = 60
 
 
+# --- Conformite au contrat d'API -------------------------------------------
+# Le contrat impose un horodatage ISO 8601 UTC termine par Z et un risk_score
+# entier, comme le Module A. isoformat() produit "+00:00" et des microsecondes,
+# et l'agregation des sources renvoie un flottant.
+
+def iso_utc(value):
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def as_score(value):
+    return int(round(value or 0))
+
+
 # ---------------------------------------------------------
 # 1. POST /ioc/lookup — with caching
 # ---------------------------------------------------------
@@ -54,10 +71,10 @@ def lookup(
             "indicator": cached.indicator,
             "type": cached.type,
             "verdict": cached.verdict,
-            "risk_score": cached.risk_score,
+            "risk_score": as_score(cached.risk_score),
             "sources": cached.sources,
             "enrichment": cached.enrichment,
-            "looked_up_at": cached.looked_up_at.isoformat(),
+            "looked_up_at": iso_utc(cached.looked_up_at),
         }
 
     # No recent cache hit — run real enrichment
@@ -87,10 +104,10 @@ def lookup(
         "indicator": indicator,
         "type": ioc_type,
         "verdict": verdict,
-        "risk_score": risk_score,
+        "risk_score": as_score(risk_score),
         "sources": sources,
         "enrichment": enrichment,
-        "looked_up_at": looked_up_at.isoformat()
+        "looked_up_at": iso_utc(looked_up_at)
     }
 
 
@@ -106,17 +123,22 @@ def history(db: Session = Depends(get_db), user=Depends(get_current_user)):
         .all()
     )
 
-    return [
-        {
-            "lookup_id": l.lookup_id,
-            "indicator": l.indicator,
-            "type": l.type,
-            "verdict": l.verdict,
-            "risk_score": l.risk_score,
-            "looked_up_at": l.looked_up_at.isoformat(),
-        }
-        for l in lookups
-    ]
+    # Le contrat impose l'enveloppe { "lookups": [...] }, comme
+    # { "submissions": [...] } cote phishing : un tableau nu ne peut pas
+    # accueillir de metadonnee (pagination, total) sans casser les clients.
+    return {
+        "lookups": [
+            {
+                "lookup_id": l.lookup_id,
+                "indicator": l.indicator,
+                "type": l.type,
+                "verdict": l.verdict,
+                "risk_score": as_score(l.risk_score),
+                "looked_up_at": iso_utc(l.looked_up_at),
+            }
+            for l in lookups
+        ]
+    }
 
 
 # ---------------------------------------------------------
@@ -135,10 +157,10 @@ def get_lookup(lookup_id: str, db: Session = Depends(get_db), user=Depends(get_c
         "indicator": l.indicator,
         "type": l.type,
         "verdict": l.verdict,
-        "risk_score": l.risk_score,
+        "risk_score": as_score(l.risk_score),
         "sources": l.sources,
         "enrichment": l.enrichment,
-        "looked_up_at": l.looked_up_at.isoformat(),
+        "looked_up_at": iso_utc(l.looked_up_at),
     }
 
 
@@ -167,7 +189,7 @@ def export(
     if format == "csv":
         lines = ["lookup_id,indicator,type,verdict,risk_score,looked_up_at"]
         for l in lookups:
-            lines.append(f'{l.lookup_id},{l.indicator},{l.type},{l.verdict},{l.risk_score},{l.looked_up_at.isoformat()}')
+            lines.append(f'{l.lookup_id},{l.indicator},{l.type},{l.verdict},{as_score(l.risk_score)},{iso_utc(l.looked_up_at)}')
         return PlainTextResponse(content="\n".join(lines), media_type="text/csv",
                                   headers={"Content-Disposition": "attachment; filename=ioc_export.csv"})
 
