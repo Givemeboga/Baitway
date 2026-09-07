@@ -5,6 +5,7 @@ persistees en base (table phishing_submissions). Les schemas de reponse
 respectent docs/api-contract.md.
 """
 
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -18,6 +19,8 @@ from app.models.phishing import PhishingSubmission
 from app.schemas.phishing import AnalyzeRequest, SubmissionUpdate
 
 router = APIRouter(prefix="/phishing", tags=["phishing"])
+
+logger = logging.getLogger(__name__)
 
 
 def iso_utc(value):
@@ -100,7 +103,11 @@ def analyze_email(
     try:
         analysis = analyse_raw_email(payload.raw_email)
     except Exception:
-        raise HTTPException(400, "Unreadable email")
+        # Le moteur est concu pour absorber un .eml malforme : s'il leve tout de
+        # meme, c'est un defaut de notre cote, pas une faute de l'analyste.
+        # On le journalise et on renvoie 500 plutot que d'accuser l'entree.
+        logger.exception("Echec de l'analyse d'un e-mail soumis par %s", user["email"])
+        raise HTTPException(500, "Analysis failed")
 
     # La decomposition du score n'est pas encore prevue par le contrat d'API.
     analysis.pop("breakdown", None)

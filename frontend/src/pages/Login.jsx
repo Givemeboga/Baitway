@@ -7,7 +7,8 @@ import { color, font } from "../theme";
 import Logo from "../components/Logo";
 import { Button, Input } from "../components/ui";
 
-// POST /auth/login prend email et password en QUERY PARAMS (routers/auth.py)
+// POST /auth/login prend email et password dans le CORPS de la requete :
+// un mot de passe en parametre d'URL finirait dans les journaux d'acces.
 // et renvoie { access_token, token_type }. 401 si identifiants invalides.
 const STEPS = [
   "Suspicious email submitted",
@@ -31,7 +32,7 @@ export default function Login() {
     setError(null);
     setLoading(true);
     try {
-      const res = await client.post("/auth/login", null, { params: { email, password } });
+      const res = await client.post("/auth/login", { email, password });
       login(res.data.access_token);
       navigate("/dashboard");
     } catch (err) {

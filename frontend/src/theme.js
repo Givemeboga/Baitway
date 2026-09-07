@@ -34,5 +34,4 @@ export const space = { xs: 6, sm: 10, md: 16, lg: 24, xl: 34 };
 export const layout = {
   sidebarWidth: 240,
   sidebarCollapsed: 62,
-  contentMax: 1440,
 };

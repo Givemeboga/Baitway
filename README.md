@@ -325,7 +325,7 @@ npm run dev
 
 1. Open http://localhost:8000/docs
 2. `POST /auth/register` → **Try it out** → fill in `email` + `password` → **Execute**
-3. Expected response: `{"message": "Utilisateur cree"}`
+3. Expected response: `{"message": "Account created"}`
 
 **Load demo data** (optional, from `backend/` with the venv active):
 

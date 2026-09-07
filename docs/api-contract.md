@@ -156,15 +156,15 @@ Crée un nouvel utilisateur.
 
 
 
-\*\*Requête\*\* (query parameters) :
+\*\*Requête\*\* (corps JSON) :
 
 | Champ | Type | Requis |
 
 |---|---|---|
 
-| email | string | oui |
+| email | string (adresse valide) | oui |
 
-| password | string | oui |
+| password | string (8 a 72 caracteres) | oui |
 
 
 
@@ -174,7 +174,7 @@ Crée un nouvel utilisateur.
 
 {
 
-&#x20; "message": "Utilisateur cree"
+&#x20; "message": "Account created"
 
 }
 
@@ -196,7 +196,7 @@ Authentifie un utilisateur et renvoie un token JWT.
 
 
 
-\*\*Requête\*\* (query parameters) :
+\*\*Requête\*\* (corps JSON) :
 
 | Champ | Type | Requis |
 
@@ -636,5 +636,17 @@ Le Module B lit ce paramètre d'URL au chargement et lance automatiquement `POST
 
 
 
-\_Version 1.0 — à valider par Youssef Ben Chaouacha et Iheb Ben Massaoud avant le démarrage de la Phase 1.\_
+\_Version 1.1 — validée par Youssef Ben Chaouacha et Iheb Ben Massaoud._
+
+\### Révisions
+
+\*\*1.1\*\* — durcissement avant la première version publiable, accord des deux parties :
+
+\- `POST /auth/register` et `POST /auth/login` reçoivent les identifiants dans le \*\*corps JSON\*\* et non plus en paramètres d'URL : un mot de passe en query string se retrouve dans les journaux d'accès, l'historique du navigateur et les proxies.
+
+\- Validation des identifiants : adresse e-mail valide, mot de passe de 8 à 72 caractères (limite imposée par bcrypt).
+
+\- La réponse de `POST /auth/register` devient `{"message": "Account created"}`, en anglais comme le reste de l'API.
+
+\*\*1.0\*\* — contrat initial, arrêté avant le démarrage de la Phase 1._
 
