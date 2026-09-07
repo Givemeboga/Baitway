@@ -4,7 +4,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import PhishingList from "./pages/phishing/PhishingList";
 import PhishingDetail from "./pages/phishing/PhishingDetail";
-import IOCPlaceholder from "./pages/IOCPlaceholder";
+import IOCLookup from "./pages/ioc/IOCLookup";
 
 // La coquille (barre laterale + zone de contenu) est portee par AppShell,
 // utilise dans chaque page : plus besoin du Layout global d'origine.
@@ -20,7 +20,7 @@ export default function App() {
         <Route path="/dashboard" element={<Private><Dashboard /></Private>} />
         <Route path="/phishing" element={<Private><PhishingList /></Private>} />
         <Route path="/phishing/:id" element={<Private><PhishingDetail /></Private>} />
-        <Route path="/ioc" element={<Private><IOCPlaceholder /></Private>} />
+        <Route path="/ioc" element={<Private><IOCLookup /></Private>} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
