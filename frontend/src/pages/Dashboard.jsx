@@ -28,12 +28,20 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isMobile } = useViewport();
 
+  const fetchQueue = () =>
+    listSubmissions().then(setSubmissions).catch((e) => setError(normalizeError(e)));
+
+  // Utilise par le bouton "Reessayer" : remet l'ecran a zero avant de recharger.
   const load = () => {
     setError(null);
     setSubmissions(null);
-    listSubmissions().then(setSubmissions).catch((e) => setError(normalizeError(e)));
+    fetchQueue();
   };
-  useEffect(load, []);
+
+  // Au montage l'etat est deja vide : on ne fait que lancer la requete.
+  useEffect(() => {
+    fetchQueue();
+  }, []);
 
   const d = submissions ? derive(submissions) : null;
 
