@@ -16,7 +16,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     Les identifiants sont lus dans le corps de la requete : en parametres
     d'URL, le mot de passe se retrouverait dans les journaux d'acces.
     """
-    email = payload.email.lower()
+    email = payload.email
     if db.query(User).filter(User.email == email).first():
         raise HTTPException(400, "Email already registered")
 
@@ -29,7 +29,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     """Authentifie un analyste et renvoie un jeton JWT."""
-    user = db.query(User).filter(User.email == payload.email.lower()).first()
+    user = db.query(User).filter(User.email == payload.email).first()
     # Meme message et meme code quel que soit le motif : ne pas indiquer si
     # l'adresse existe.
     if not user or not verify_password(payload.password, user.hashed_password):
