@@ -39,6 +39,9 @@ export default function PhishingDetail() {
       .then((data) => { setSub(data); setNotes(data.notes || ""); })
       .catch((e) => setError(normalizeError(e)));
   };
+  // Ici la remise a zero est voulue : changer d'identifiant doit effacer la
+  // soumission precedente avant d'afficher la suivante.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(load, [id]);
 
   // PATCH /phishing/submissions/{id} accepte verdict, status et notes (tous optionnels).

@@ -22,4 +22,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+// Le hook vit avec son contexte : le deplacer casserait les imports des deux
+// modules pour un gain purement cosmetique.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

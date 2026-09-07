@@ -40,10 +40,12 @@ export default function IOCLookup() {
 
   useEffect(() => {
     if (indicatorParam) {
+      // Le champ doit refleter l'indicateur transmis par le pont phishing -> IOC :
+      // la mise a jour synchrone est ici le comportement recherche.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInputValue(indicatorParam);
       runLookup(indicatorParam);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indicatorParam]);
 
   function handleSubmit(e) {
