@@ -1,5 +1,6 @@
 from app.models.user import User  # noqa: F401 — nécessaire pour l'autogenerate
 from app.core.database import Base
+from app.models.ioc import IOCLookup
 
 from logging.config import fileConfig
 
