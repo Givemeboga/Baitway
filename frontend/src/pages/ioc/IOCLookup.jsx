@@ -1,207 +1,186 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import { normalizeError } from "../../api/errors";
+import { toneForVerdict, formatDate } from "../../lib/verdict";
+import { color, font, severity } from "../../theme";
+import AppShell from "../../components/AppShell";
+import {
+  Card, Button, Input, Badge, SeverityBadge,
+  LoadingState, EmptyState, ErrorState,
+} from "../../components/ui";
 
-const verdictColors = {
-    clean: "#2e7d32",
-    suspicious: "#e65100",
-    malicious: "#c62828",
-};
-
-function VerdictBadge({ verdict }) {
-    const color = verdictColors[verdict] || "#616161";
-    return (
-        <span
-            style={{
-                display: "inline-block",
-                padding: "4px 12px",
-                borderRadius: 6,
-                background: color,
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: 13,
-                textTransform: "uppercase",
-            }}
-        >
-            {verdict}
-        </span>
-    );
-}
-
+// POST /ioc/lookup attend { indicator } ; le type est detecte cote serveur.
+// La page lit ?indicator= (pont depuis l'analyse phishing) et ?from= (retour).
 export default function IOCLookup() {
-    const [params] = useSearchParams();
-    const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
 
-    const indicatorParam = params.get("indicator");
-    const from = params.get("from");
+  const indicatorParam = params.get("indicator");
+  const from = params.get("from");
 
-    const [inputValue, setInputValue] = useState(indicatorParam || "");
-    const [result, setResult] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+  const [inputValue, setInputValue] = useState(indicatorParam || "");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-    async function runLookup(indicator) {
-        setLoading(true);
-        setError(null);
-        setResult(null);
-
-        try {
-            const response = await api.post("/ioc/lookup", { indicator });
-            setResult(response.data);
-        } catch (err) {
-            const message =
-                err.response?.data?.detail || err.message || "Lookup failed";
-            setError(message);
-        } finally {
-            setLoading(false);
-        }
+  async function runLookup(indicator) {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const response = await api.post("/ioc/lookup", { indicator });
+      setResult(response.data);
+    } catch (err) {
+      setError(normalizeError(err));
+    } finally {
+      setLoading(false);
     }
+  }
 
-    useEffect(() => {
-        if (indicatorParam) {
-            runLookup(indicatorParam);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [indicatorParam]);
-
-    function handleSubmit(e) {
-        e.preventDefault();
-        if (inputValue.trim()) {
-            runLookup(inputValue.trim());
-        }
+  useEffect(() => {
+    if (indicatorParam) {
+      setInputValue(indicatorParam);
+      runLookup(indicatorParam);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indicatorParam]);
 
-    const cardStyle = {
-        background: "#fff",
-        border: "1px solid #e0e0e0",
-        borderRadius: 8,
-        padding: 20,
-        marginTop: 16,
-    };
+  function handleSubmit(e) {
+    e.preventDefault();
+    const value = inputValue.trim();
+    if (value && !loading) runLookup(value);
+  }
 
-    return (
-        <div style={{ padding: 40, maxWidth: 720 }}>
-            {from && (
-                <div style={{ marginBottom: 16 }}>
-                    <button
-                        onClick={() => navigate(`/phishing/${from}`)}
-                        style={{
-                            background: "none",
-                            border: "none",
-                            color: "#16233f",
-                            cursor: "pointer",
-                            fontSize: 14,
-                        }}
-                    >
-                        ← Back to analysis
-                    </button>
-                </div>
-            )}
+  const tone = result ? toneForVerdict(result.verdict) : null;
+  const sources = result?.sources || [];
+  const enrichment = result?.enrichment || {};
 
-            <h1 style={{ marginBottom: 4 }}>IOC Lookup</h1>
-            <p style={{ color: "#666", marginBottom: 20 }}>
-                Investigate an IP, domain, URL or hash
-            </p>
+  // Seules les cles renseignees sont affichees : on ne montre pas de champ vide.
+  const facts = [
+    ["type", result?.type],
+    ["geolocation", enrichment.geolocation],
+    ["asn", enrichment.asn],
+    ["domain_age_days", enrichment.domain_age_days],
+    ["registrar", enrichment.registrar],
+    ["blacklisted", enrichment.blacklisted ? "yes" : "no"],
+    ["looked_up_at", result ? formatDate(result.looked_up_at) : null],
+  ].filter(([, v]) => v !== null && v !== undefined && v !== "");
 
-            <form onSubmit={handleSubmit} style={{ display: "flex", gap: 8 }}>
-                <input
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="Enter IOC (IP, domain, URL, or hash)"
-                    style={{
-                        flex: 1,
-                        padding: "10px 12px",
-                        border: "1px solid #ccc",
-                        borderRadius: 6,
-                        fontSize: 14,
-                    }}
+  return (
+    <AppShell
+      title="IOC Lookup"
+      subtitle="Investigate an IP, domain, URL or file hash across multiple sources."
+      actions={
+        from ? (
+          <Button onClick={() => navigate(`/phishing/${from}`)}>← Back to analysis</Button>
+        ) : undefined
+      }
+    >
+      <Card title="New lookup" meta="POST /ioc/lookup">
+        <form onSubmit={handleSubmit} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Input
+            mono
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="8.8.8.8 · example.com · https://… · sha256…"
+            style={{ flex: 1, minWidth: 260 }}
+          />
+          <Button variant="primary" type="submit" disabled={!inputValue.trim() || loading}>
+            {loading ? "Looking up…" : "Look up"}
+          </Button>
+        </form>
+        <span style={{ fontSize: 12.5, color: color.muted }}>
+          The indicator type is detected server-side — no need to say which it is.
+        </span>
+        {loading && <LoadingState label="Querying sources…" hint="Results are cached for 60 minutes." />}
+        {error && <ErrorState error={error} />}
+      </Card>
+
+      {!loading && !error && !result && (
+        <Card>
+          <EmptyState
+            title="No lookup yet"
+            message="Enter an indicator above, or open one from a phishing analysis."
+          />
+        </Card>
+      )}
+
+      {result && (
+        <>
+          {/* QUEL RISQUE — verdict et score avant toute preuve. */}
+          <Card>
+            <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+                <span style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1, color: tone.fg }}>
+                  {result.risk_score}
+                </span>
+                <SeverityBadge value={result.verdict} dot={false} style={{ fontSize: 14 }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 180, height: 5, background: color.divider }}>
+                <div style={{ width: `${Math.min(result.risk_score, 100)}%`, height: "100%", background: tone.fg }} />
+              </div>
+              <span style={{ fontFamily: font.mono, fontSize: 13, color: color.text, wordBreak: "break-all" }}>
+                {result.indicator}
+              </span>
+            </div>
+          </Card>
+
+          <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
+            {/* POURQUOI — ce que chaque source a repondu. */}
+            <Card title="Sources" meta={`${sources.length}`} style={{ flex: 3, minWidth: 340 }}>
+              {sources.length === 0 ? (
+                <EmptyState
+                  title="No source returned data"
+                  message="No configured source covers this indicator type."
                 />
-                <button
-                    type="submit"
-                    disabled={loading}
+              ) : (
+                sources.map((s, i) => (
+                  <div
+                    key={`${s.name}-${i}`}
                     style={{
-                        padding: "10px 20px",
-                        background: "#16233f",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: 6,
-                        cursor: loading ? "not-allowed" : "pointer",
-                        opacity: loading ? 0.6 : 1,
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      gap: 14, padding: "11px 0",
+                      borderBottom: i < sources.length - 1 ? `1px solid ${color.divider}` : "none",
                     }}
-                >
-                    {loading ? "Looking up..." : "Lookup"}
-                </button>
-            </form>
+                  >
+                    <span style={{ fontSize: 13.5 }}>{s.name}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <span style={{ fontFamily: font.mono, fontSize: 11.5, color: color.muted }}>
+                        {s.score}
+                      </span>
+                      <SeverityBadge value={s.result} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </Card>
 
-            {loading && <p style={{ marginTop: 16 }}>Loading...</p>}
-
-            {error && (
-                <div style={{ ...cardStyle, borderColor: "#c62828", color: "#c62828" }}>
-                    {error}
+            {/* CONTEXTE — metadonnees transverses. */}
+            <Card title="Enrichment" style={{ flex: 2, minWidth: 280 }}>
+              {facts.length === 0 ? (
+                <EmptyState title="No metadata" message="No enrichment available for this indicator." />
+              ) : (
+                facts.map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+                    <span style={{ fontFamily: font.mono, fontSize: 10.5, letterSpacing: "0.06em", color: color.muted, width: 118, flex: "none" }}>
+                      {k}
+                    </span>
+                    <span style={{ fontSize: 13, wordBreak: "break-word" }}>{String(v)}</span>
+                  </div>
+                ))
+              )}
+              {result.verdict === "clean" && sources.every((s) => s.result === "unknown") && (
+                <div style={{ marginTop: 4 }}>
+                  <Badge tone={severity.unknown} style={{ whiteSpace: "normal", lineHeight: 1.5 }}>
+                    no source had data — absence of a report is not a verdict
+                  </Badge>
                 </div>
-            )}
-
-            {!loading && !error && !result && (
-                <p style={{ marginTop: 16, color: "#999" }}>
-                    Enter an indicator above to begin
-                </p>
-            )}
-
-            {result && (
-                <>
-                    <div style={cardStyle}>
-                        <p style={{ color: "#666", margin: 0 }}>Indicator</p>
-                        <h3 style={{ margin: "4px 0 12px" }}>{result.indicator}</h3>
-
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            <span style={{ fontSize: 32, fontWeight: 700 }}>
-                                {result.risk_score}
-                            </span>
-                            <VerdictBadge verdict={result.verdict} />
-                        </div>
-                    </div>
-
-                    <div style={cardStyle}>
-                        <h4 style={{ marginTop: 0, marginBottom: 8 }}>Sources</h4>
-                        {result.sources.length === 0 && (
-                            <p style={{ color: "#999" }}>No sources returned data.</p>
-                        )}
-                        {result.sources.map((s, idx) => (
-                            <div
-                                key={idx}
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    padding: "8px 0",
-                                    borderBottom:
-                                        idx < result.sources.length - 1
-                                            ? "1px solid #eee"
-                                            : "none",
-                                }}
-                            >
-                                <span>{s.name}</span>
-                                <VerdictBadge verdict={s.result} />
-                            </div>
-                        ))}
-                    </div>
-
-                    <div style={cardStyle}>
-                        <h4 style={{ marginTop: 0, marginBottom: 8 }}>Enrichment</h4>
-                        {result.enrichment.geolocation && (
-                            <p>Geolocation: {result.enrichment.geolocation}</p>
-                        )}
-                        {result.enrichment.asn && <p>ASN: {result.enrichment.asn}</p>}
-                        {result.enrichment.domain_age_days != null && (
-                            <p>Domain age: {result.enrichment.domain_age_days} days</p>
-                        )}
-                        {result.enrichment.registrar && (
-                            <p>Registrar: {result.enrichment.registrar}</p>
-                        )}
-                        <p>Blacklisted: {result.enrichment.blacklisted ? "Yes" : "No"}</p>
-                    </div>
-                </>
-            )}
-        </div>
-    );
+              )}
+            </Card>
+          </div>
+        </>
+      )}
+    </AppShell>
+  );
 }
