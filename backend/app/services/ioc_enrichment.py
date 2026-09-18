@@ -1,4 +1,4 @@
-﻿from app.services.enrichment.virustotal import check_virustotal
+from app.services.enrichment.virustotal import check_virustotal
 from app.services.enrichment.abuseipdb import check_abuseipdb
 from app.services.enrichment.urlhaus import check_urlhaus
 from app.services.enrichment.malwarebazaar import check_malwarebazaar
@@ -18,11 +18,19 @@ def enrich_indicator(indicator: str, ioc_type: str) -> tuple[list, dict]:
     if ioc_type == "ip":
         sources.append(check_abuseipdb(indicator, ioc_type))
 
-    if ioc_type == "url":
+    # URLhaus answers on a URL (/url/) but also on the domain or IP hosting
+    # it (/host/), so it is worth querying for all three.
+    if ioc_type in ("url", "domain", "ip"):
         sources.append(check_urlhaus(indicator, ioc_type))
 
     if ioc_type == "hash":
         sources.append(check_malwarebazaar(indicator, ioc_type))
+
+    # WHOIS/RDAP is queried for domains and listed like any other source, so
+    # the analyst can see it ran. It always scores 0 and cannot move the
+    # verdict — see whois_rdap.check_whois_rdap.
+    if ioc_type == "domain":
+        sources.append(check_whois_rdap(indicator, ioc_type))
 
     # Filter out "not applicable for this type" no-op results so they
     # do not pollute the sources list shown to the analyst
@@ -40,9 +48,12 @@ def enrich_indicator(indicator: str, ioc_type: str) -> tuple[list, dict]:
     }
 
     if ioc_type == "domain":
-        whois_data = check_whois_rdap(indicator, ioc_type)
-        enrichment["domain_age_days"] = whois_data.get("domain_age_days")
-        enrichment["registrar"] = whois_data.get("registrar")
+        # WHOIS result already fetched above; pull the registration facts
+        # from its raw data rather than querying RDAP a second time.
+        whois_result = next((s for s in sources if s["name"] == "WHOIS"), None)
+        if whois_result:
+            enrichment["domain_age_days"] = whois_result["raw"].get("domain_age_days")
+            enrichment["registrar"] = whois_result["raw"].get("registrar")
 
     if ioc_type == "ip":
         # AbuseIPDB result already fetched above; pull geolocation from its raw data
