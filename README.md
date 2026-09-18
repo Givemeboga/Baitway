@@ -144,9 +144,15 @@ treated as a domain by default.
 |---|---|:---:|
 | VirusTotal | all types | required |
 | AbuseIPDB | IP | required |
-| URLhaus | URL | — |
-| MalwareBazaar | hash | — |
+| URLhaus | URL, domain, IP | required |
+| MalwareBazaar | hash | required |
 | WHOIS / RDAP | domain (registrar, age) | — |
+
+URLhaus answers on two endpoints: `/url/` for a full URL, `/host/` for the domain or IP
+serving it — a malicious URL hosted somewhere is evidence about that host. A single
+abuse.ch auth key covers both URLhaus and MalwareBazaar. WHOIS/RDAP is listed among the
+sources so the analyst can see it ran, but always scores `0`: it reports registration
+facts, not reputation, and must not move the verdict.
 
 **Aggregation** takes the **highest** score among sources that actually returned data,
 ignoring those reporting `unknown`. A single strong signal — a MalwareBazaar hit, say —
@@ -270,8 +276,10 @@ ABUSECH_AUTH_KEY=
 ```
 
 > [!NOTE]
-> The API keys are optional. Without them, URLhaus, MalwareBazaar and WHOIS/RDAP still work;
-> VirusTotal and AbuseIPDB simply report `unknown` and are left out of the verdict.
+> The keys are optional only in the sense that the module still runs without them: a source
+> with no key reports `unknown` and is excluded from the verdict rather than failing the
+> request. **Only WHOIS/RDAP works without a key.** VirusTotal, AbuseIPDB and abuse.ch all
+> require one — `ABUSECH_AUTH_KEY` covers URLhaus and MalwareBazaar together.
 
 > [!TIP]
 > Generate a strong secret key:
